@@ -765,14 +765,14 @@ function buildOffice(b){
     const lab=sprite(labelTex(bot.name,STATUS[bot.status].label,hexCss(b.color),STATUS[bot.status].css),2.05,.64);lab.position.y=2.55;station.add(lab);
     const alarm=new THREE.Mesh(new THREE.ConeGeometry(.12,.2,16),glow(0xff4f6d));alarm.position.set(-.9,1.0,-.95);station.add(alarm);
     const zz=sprite(ctex(128,128,(g)=>{g.fillStyle='#a3aad8';g.font='700 64px "Chakra Petch",sans-serif';g.fillText('z',20,90);g.font='700 44px "Chakra Petch",sans-serif';g.fillText('z',70,50)}),.45,.45);zz.position.set(.25,2.15,0);station.add(zz);
-    const R={bot,station,seat,rob,lab,pad,screen:st,alarm,zz,phase:hashStr(bot.name)%100,face:0,wave:0};
+    const R={bot,station,seat,rob,lab,pad,screen:st,alarm,zz,phase:hashStr(bot.name)%100,face:0,wave:0,power:bot.status==='paused'?0:1};
     O.robots[bot.id]=R;
     station.traverse(o=>{if(o.isMesh){o.userData.botId=bot.id;O.pick.push(o)}});
     applyRobotStatus(R);
   }
   O.anims.push(t=>{skylight.material.opacity=.45+.15*Math.sin(t*.8)});
 }
-function applyRobotStatus(R){const st=STATUS[R.bot.status];R.rob.eye.color.setHex(st.hex);R.pad.material.color.setHex(st.hex);R.alarm.visible=R.bot.status==='error';R.zz.visible=R.bot.status==='paused'}
+function applyRobotStatus(R){const st=STATUS[R.bot.status];R.pad.material.color.setHex(st.hex);R.alarm.visible=R.bot.status==='error'}
 function refreshOffice(){
   if(mode!=='office')return;const b=BIZ.find(x=>x.id===currentBiz);if(!b)return;
   const ids=b.bots.map(x=>x.id).sort().join(),have=Object.keys(O.robots).sort().join();
@@ -782,27 +782,40 @@ function refreshOffice(){
     const old=R.lab.material.map;R.lab.material.map=labelTex(bot.name,STATUS[bot.status].label,hexCss(b.color),STATUS[bot.status].css);old.dispose()});
   if(O.wall){const c=O.wall.userData;drawWall(c.g,c.canvas.width,c.canvas.height,b);O.wall.needsUpdate=true}
 }
+const _eyeCol=new THREE.Color(),_offCol=new THREE.Color(0x14172a);
 function animateRobots(t,dt){
   Object.values(O.robots).forEach(R=>{
     const st=R.bot.status,rob=R.rob,p=R.phase,L=rob.arms.L,Rt=rob.arms.R,focus=focusBot===R.bot.id;
+    // power eases toward 1 (on) or 0 (off) over about a second and a half
+    const want=st==='paused'?0:1;R.power+=Math.sign(want-R.power)*Math.min(Math.abs(want-R.power),dt*.7);
+    const pw=R.power,ease=pw*pw*(3-2*pw);
     R.face+=((focus?1:0)-R.face)*Math.min(1,dt*4);
     R.seat.rotation.y=Math.PI*(1-R.face);
-    let shL=-.72,elL=-.6,shR=-.72,elR=-.6,zL=0,zR=0,headX=0,headY=0,torsoX=0;
-    if(st==='running'){const k=Math.sin(t*14+p),k2=Math.sin(t*13+p+1.7);shL+=k*.05;elL+=k*.12;shR+=k2*.05;elR+=k2*.12;headX=.08+Math.sin(t*1.3+p)*.04;headY=Math.sin(t*.7+p)*.15}
-    else if(st==='waiting'){shL=-.2;elL=-.35;shR=-.2;elR=-.35;headY=Math.sin(t*.6+p)*.55;headX=-.05}
-    else if(st==='paused'){shL=.05;elL=-.15;shR=.05;elR=-.15;headX=.42;torsoX=.12}
-    else if(st==='error'){shL=-.4;shR=-.4;zL=-2.3;zR=2.3;elL=-1.4;elR=-1.4;headX=.25;headY=Math.sin(t*2.2+p)*.25;R.alarm.rotation.y=t*6}
-    if(R.face>.02){const f=R.face;shL=shL*(1-f)+(-.1)*f;elL=elL*(1-f)+(-.25)*f;zL*=1-f;headX*=1-f;headY*=1-f;torsoX*=1-f;
+    // active pose for the bot's status
+    let shL=-.72,elL=-.6,shR=-.72,elR=-.6,zL=0,zR=0,headX=0,headY=0;
+    const act=st==='paused'?(R.lastActive||'running'):st;if(st!=='paused')R.lastActive=st;
+    if(act==='running'){const k=Math.sin(t*14+p),k2=Math.sin(t*13+p+1.7);shL+=k*.05;elL+=k*.12;shR+=k2*.05;elR+=k2*.12;headX=.08+Math.sin(t*1.3+p)*.04;headY=Math.sin(t*.7+p)*.15}
+    else if(act==='waiting'){shL=-.2;elL=-.35;shR=-.2;elR=-.35;headY=Math.sin(t*.6+p)*.55;headX=-.05}
+    else if(act==='error'){shL=-.4;shR=-.4;zL=-2.3;zR=2.3;elL=-1.4;elR=-1.4;headX=.25;headY=Math.sin(t*2.2+p)*.25;R.alarm.rotation.y=t*6}
+    // greeting when you tap a bot that is powered on
+    const greet=R.face*ease;
+    if(greet>.02){const f=greet;shL=shL*(1-f)+(-.1)*f;elL=elL*(1-f)+(-.25)*f;zL*=1-f;headX*=1-f;headY*=1-f;
       zR=zR*(1-f)+2.55*f;shR=shR*(1-f)+(-.25)*f;elR=elR*(1-f)+(Math.sin(t*9)*.45-.2)*f}
-    L.sh.rotation.set(shL,0,zL);L.el.rotation.set(elL,0,0);Rt.sh.rotation.set(shR,0,zR);Rt.el.rotation.set(elR,0,st==='error'&&R.face<.5?0:0);
-    if(R.face>.02)Rt.el.rotation.z=Math.sin(t*9)*.5*R.face;
-    rob.headPivot.rotation.set(headX,headY,0);rob.torso.rotation.x=torsoX;
-    if(st==='error'){const on=Math.sin(t*9)>0;rob.eye.color.setHex(on?0xff4f6d:0x3a0a14)}
-    else if(st==='paused')rob.eye.color.setHex(Math.sin(t*1.5+p)>.85?0x2a2f48:0x5a6290);
-    else{const blink=((t+p*.37)%4)<.1;rob.eyes.forEach(e=>e.scale.y=blink?.2:1.25)}
-    if(rob.gear.userData.dish)rob.gear.userData.dish.rotation.z=t*1.2;
-    R.zz.position.y=2.1+((t*.4+p*.01)%1)*.35;R.zz.material.opacity=1-((t*.4+p*.01)%1);
-    R.pad.material.opacity=.45+.25*Math.sin(t*2+p);
+    // slump toward the powered-down pose
+    const off=1-ease,mix=(a,b)=>a*(1-off)+b*off;
+    shL=mix(shL,.12);elL=mix(elL,-.08);shR=mix(shR,.12);elR=mix(elR,-.08);zL=mix(zL,.18);zR=mix(zR,-.18);
+    headX=mix(headX,.55);headY=mix(headY,.12*Math.sin(p));
+    L.sh.rotation.set(shL,0,zL);L.el.rotation.set(elL,0,0);Rt.sh.rotation.set(shR,0,zR);Rt.el.rotation.set(elR,0,greet>.02?Math.sin(t*9)*.5*greet:0);
+    rob.headPivot.rotation.set(headX,headY,0);rob.torso.rotation.x=mix(0,.16);rob.group.position.y=mix(0,-.04);
+    // eyes: status color, fading out with a flicker as power drops
+    _eyeCol.setHex(act==='error'?(Math.sin(t*9)>0?0xff4f6d:0x3a0a14):STATUS[act].hex);
+    const flicker=pw>.05&&pw<.95?(Math.sin(t*47+p)>.2?1:.15):1;
+    rob.eye.color.copy(_offCol).lerp(_eyeCol,Math.min(1,ease*1.15)*flicker);
+    const blink=pw>.95&&((t+p*.37)%4)<.1;rob.eyes.forEach(e=>e.scale.y=blink?.2:1.25);
+    rob.acc.emissiveIntensity=.08+.47*ease;
+    if(rob.gear.userData.dish)rob.gear.userData.dish.rotation.z+=dt*1.2*ease;
+    R.zz.visible=pw<.15;R.zz.position.y=2.1+((t*.4+p*.01)%1)*.35;R.zz.material.opacity=(1-((t*.4+p*.01)%1))*(1-pw/.15);
+    R.pad.material.opacity=(.45+.25*Math.sin(t*2+p))*(.35+.65*ease);
     R.lab.visible=!focusBot;
   });
 }
@@ -842,6 +855,7 @@ const panel=document.getElementById('panel'),pTitle=document.getElementById('p-t
 const hint=document.getElementById('hint'),fade=document.getElementById('fade'),whereEl=document.getElementById('where');
 function fadeTo(fn){if(REDUCE){fn();return}fade.classList.add('on');setTimeout(()=>{fn();setTimeout(()=>fade.classList.remove('on'),60)},400)}
 function enterOffice(id){const b=BIZ.find(x=>x.id===id);if(!b)return;
+  if(!(history.state&&history.state.v))history.pushState({v:'office'},'');
   Object.assign(goal.city,{tx:b.x,ty:3,tz:b.z,r:12,phi:1.15});
   setTimeout(()=>fadeTo(()=>{currentBiz=id;focusBot=null;mode='office';buildOffice(b);
     Object.assign(view.office,OFF_HOME,{r:OFF_HOME.r+6});Object.assign(goal.office,OFF_HOME);
@@ -851,12 +865,17 @@ function enterOffice(id){const b=BIZ.find(x=>x.id===id);if(!b)return;
 function exitOffice(){fadeTo(()=>{mode='city';currentBiz=null;focusBot=null;disposeTree(O.scene);O.scene=null;O.robots={};O.pick=[];
   document.body.classList.remove('office','open','focus');panel.hidden=true;hint.hidden=false;hint.textContent='Drag to look around · Tap a building to enter';whereEl.textContent='';
   Object.assign(goal.city,CITY_HOME)})}
-function focusOn(id){const R=O.robots[id];if(!R)return;focusBot=id;document.body.classList.add('focus');
+function focusOn(id){const R=O.robots[id];if(!R)return;if(history.state&&history.state.v==='bot')history.replaceState({v:'bot'},'');else history.pushState({v:'bot'},'');focusBot=id;document.body.classList.add('focus');
   const p=R.station.position;Object.assign(goal.office,{tx:p.x,ty:1.35,tz:p.z,r:SMALL?4.6:4,phi:1.28,theta:0});renderPanel()}
 function unfocus(){focusBot=null;document.body.classList.remove('focus');Object.assign(goal.office,OFF_HOME);renderPanel()}
-function back(){if(mode!=='office')return;if(focusBot)unfocus();else exitOffice()}
+function back(){if(mode!=='office')return;if(history.state&&history.state.v){history.back();return}if(focusBot)unfocus();else exitOffice()}
+function toCity(){if(mode!=='office')return;const v=history.state&&history.state.v;if(v==='bot')history.go(-2);else if(v==='office')history.back();else exitOffice()}
+addEventListener('popstate',e=>{const v=e.state&&e.state.v;
+  if(!v){if(mode==='office')exitOffice()}
+  else if(v==='office'){if(focusBot)unfocus();else if(mode!=='office')history.back()}
+  else if(v==='bot'&&!focusBot)history.back()});
 document.getElementById('close').addEventListener('click',back);
-document.getElementById('back').addEventListener('click',()=>{if(mode==='office')exitOffice()});
+document.getElementById('back').addEventListener('click',toCity);
 addEventListener('keydown',e=>{if(e.key==='Escape')back()});
 
 const face=c=>`<svg viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8"><rect x="4" y="7" width="16" height="12" rx="3"/><circle cx="9" cy="13" r="1.4" fill="${c}"/><circle cx="15" cy="13" r="1.4" fill="${c}"/><path d="M12 7V4M10 4h4"/></svg>`;
@@ -883,7 +902,7 @@ function renderPanel(){
       <div class="actions">${botActions(bot)}</div></div>`}).join('')}</div>`;
 }
 pContent.addEventListener('click',async e=>{
-  if(e.target.closest('[data-back]')){unfocus();return}
+  if(e.target.closest('[data-back]')){back();return}
   const btn=e.target.closest('button[data-a]');
   if(!btn){if(e.target.closest('a'))return;const d=e.target.closest('[data-bot]');if(d)focusOn(d.dataset.bot);return}
   btn.disabled=true;btn.textContent='Working…';
@@ -928,6 +947,7 @@ async function load(){
     showBanner('Can\'t reach your bots right now.'+why);
     if(!built){try{const r=await api('/api/layout');if(r.ok){const j=await r.json();await fontsReady;BIZ=j.businesses;buildSkyline();buildBusinesses();clearTrees();built=true;updateCounter()}}catch{}}}
 }
+if(history.state&&history.state.v)history.replaceState(null,'');  // a reload always starts in the city
 load();setInterval(load,60000);
 
 // ============================================================
