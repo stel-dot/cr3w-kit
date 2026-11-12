@@ -1,0 +1,10 @@
+#cloud-config
+# CR3W server: paste into Hetzner "Cloud config" when creating the server.
+# Installs n8n (n8n.cr3winc.com) and CR3W City (city.cr3winc.com) automatically.
+# Before creating: replace YOUR-PASSWORD-HERE on the first runcmd line with your server password (letters and numbers).
+runcmd:
+  - echo 'root:YOUR-PASSWORD-HERE' | chpasswd && chage -d "$(date +%F)" -M 99999 root
+  - printf 'PasswordAuthentication no\nKbdInteractiveAuthentication no\n' > /etc/ssh/sshd_config.d/99-cr3w.conf && systemctl restart ssh
+  - mkdir -p /root/cr3w && cd /root/cr3w && for f in setup.sh update.sh docker-compose.yml Caddyfile; do curl -fsSL "https://raw.githubusercontent.com/stel-dot/cr3w-kit/main/server/$f" -o "$f"; done && bash setup.sh n8n.cr3winc.com > /root/cr3w/setup.log 2>&1
+  - command -v git >/dev/null || apt-get install -y git
+  - curl -fsSL https://raw.githubusercontent.com/stel-dot/cr3w-kit/main/city.sh | bash > /root/cr3w/city.log 2>&1
