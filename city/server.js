@@ -372,7 +372,7 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       return res.end(html);
     }
-    const STATIC = { '/manifest.json': 'application/manifest+json', '/sw.js': 'text/javascript', '/icon-192.png': 'image/png', '/icon-512.png': 'image/png', '/lion.png': 'image/png' };
+    const STATIC = { '/manifest.json': 'application/manifest+json', '/sw.js': 'text/javascript', '/icon-192.png': 'image/png', '/icon-512.png': 'image/png', '/lion.png': 'image/png', '/cr3w-wordmark.png': 'image/png' };
     if (req.method === 'GET' && STATIC[url.pathname]) {
       res.writeHead(200, { 'Content-Type': STATIC[url.pathname], 'Cache-Control': 'no-cache' });
       return res.end(fs.readFileSync(path.join(__dirname, 'public', url.pathname.slice(1))));
