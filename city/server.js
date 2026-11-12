@@ -56,13 +56,13 @@ function readBody(req) {
 
 // ---------- Buildings and which bots live in them ----------
 const BUSINESSES = [
-  { id: 'cr3w', name: 'CR3W Tower', sub: 'Custom apparel · bulk orders', color: 0x7c5cff, x: 0, z: 0, h: 11 }
+  { id: 'cr3w',    name: 'CR3W Tower',     sub: 'Custom apparel · bulk orders', color: 0x8b6cff, x: 0,  z: 0, h: 11 },
+  { id: 'youtube', name: 'YouTube Studio', sub: 'Clips and channel growth',     color: 0xff3b5c, x: 11, z: 5, h: 8 }
   // Future buildings: remove the // to open one. Each spot is already laid out on the city ring.
-  // { id: 'etsy',     name: 'Etsy Shop',       sub: 'Digital + print listings', color: 0xff8a3d, x: -10, z: 4,  h: 7 },
-  // { id: 'youtube',  name: 'YouTube Studio',  sub: 'Videos and channel growth', color: 0xff4f6d, x: 10,  z: 4,  h: 8 },
-  // { id: 'gamedev',  name: 'Game Dev Lab',    sub: 'Pig Pursuit and more',      color: 0x2bd99a, x: -8,  z: -9, h: 9 },
-  // { id: 'contract', name: 'Contracting Co.', sub: 'Installs and HVAC jobs',    color: 0x2bd9c4, x: 8,   z: -9, h: 6 },
-  // { id: 'lot',      name: 'Empty Lot',       sub: 'Room to expand',            color: 0x3a4280, x: 0,   z: 12, h: 0 }
+  // { id: 'etsy',     name: 'Etsy Shop',       sub: 'Digital + print listings', color: 0xff8a3d, x: -11, z: 5,  h: 7 },
+  // { id: 'gamedev',  name: 'Game Dev Lab',    sub: 'Pig Pursuit and more',      color: 0x2bd99a, x: -8,  z: -10, h: 9 },
+  // { id: 'contract', name: 'Contracting Co.', sub: 'Installs and HVAC jobs',    color: 0x2bd9c4, x: 8,   z: -10, h: 6 },
+  // { id: 'lot',      name: 'Empty Lot',       sub: 'Room to expand',            color: 0x3a4280, x: 0,   z: 13, h: 0 }
 ];
 
 // Match n8n workflow names to a building and a plain-English job.
@@ -372,9 +372,9 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       return res.end(html);
     }
-    const STATIC = { '/manifest.json': 'application/manifest+json', '/sw.js': 'text/javascript', '/icon-192.png': 'image/png', '/icon-512.png': 'image/png' };
+    const STATIC = { '/manifest.json': 'application/manifest+json', '/sw.js': 'text/javascript', '/icon-192.png': 'image/png', '/icon-512.png': 'image/png', '/lion.png': 'image/png' };
     if (req.method === 'GET' && STATIC[url.pathname]) {
-      res.writeHead(200, { 'Content-Type': STATIC[url.pathname] });
+      res.writeHead(200, { 'Content-Type': STATIC[url.pathname], 'Cache-Control': 'no-cache' });
       return res.end(fs.readFileSync(path.join(__dirname, 'public', url.pathname.slice(1))));
     }
     res.writeHead(404, { 'Content-Type': 'text/plain' });
