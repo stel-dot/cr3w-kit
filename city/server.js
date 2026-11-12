@@ -57,7 +57,7 @@ function readBody(req) {
 // ---------- Buildings and which bots live in them ----------
 const BUSINESSES = [
   { id: 'cr3w',    name: 'CR3W Tower',     sub: 'Custom apparel · bulk orders', color: 0x8b6cff, x: 0,  z: 0, h: 11 },
-  { id: 'youtube', name: 'YouTube Studio', sub: 'Clips and channel growth',     color: 0xff3b5c, x: 11, z: 5, h: 8 }
+  { id: 'youtube', name: 'YouTube Studio', sub: 'Clips and channel growth',     color: 0xff3b5c, x: 10, z: 4.5, h: 12 }
   // Future buildings: remove the // to open one. Each spot is already laid out on the city ring.
   // { id: 'etsy',     name: 'Etsy Shop',       sub: 'Digital + print listings', color: 0xff8a3d, x: -11, z: 5,  h: 7 },
   // { id: 'gamedev',  name: 'Game Dev Lab',    sub: 'Pig Pursuit and more',      color: 0x2bd99a, x: -8,  z: -10, h: 9 },

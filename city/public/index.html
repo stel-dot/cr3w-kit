@@ -310,6 +310,7 @@ city.add(moon);
   const tg=new THREE.ConeGeometry(.42,1.4,10),tm=new THREE.MeshStandardMaterial({color:0x37d6c0,emissive:0x0f6b63,emissiveIntensity:.35,roughness:.5,envMap:ENV});
   const n=34,trees=new THREE.InstancedMesh(tg,tm,n),o=new THREE.Object3D();trees.castShadow=true;
   for(let i=0;i<n;i++){const a=i/n*Math.PI*2+.05,r=15.6+(i%2)*.5;o.position.set(Math.cos(a)*r,.7,Math.sin(a)*r);o.scale.setScalar(.8+rnd()*.5);o.updateMatrix();trees.setMatrixAt(i,o.matrix)}city.add(trees);
+  window.clearTrees=()=>{const m=new THREE.Matrix4(),p=new THREE.Vector3(),zero=new THREE.Matrix4().makeScale(0,0,0);for(let i=0;i<n;i++){trees.getMatrixAt(i,m);p.setFromMatrixPosition(m);if(BIZ.some(b=>Math.hypot(b.x-p.x,b.z-p.z)<5.6))trees.setMatrixAt(i,zero)}trees.instanceMatrix.needsUpdate=true};
   const lg=new THREE.SphereGeometry(.11,8,6),lamps=new THREE.InstancedMesh(lg,glow(0xfff1d6),48);
   for(let i=0;i<48;i++){const a=i/48*Math.PI*2;o.position.set(Math.cos(a)*22.2,1.6,Math.sin(a)*22.2);o.scale.setScalar(1);o.updateMatrix();lamps.setMatrixAt(i,o.matrix)}city.add(lamps);
 }
@@ -361,46 +362,105 @@ function buildSkyline(){
 }
 
 // --- business buildings ---
-function towerTwist(b){ // CR3W Tower: twisting white floor plates around a glass core
-  const g=new THREE.Group(),h=b.h*1.3,base=.32;
-  const core=mesh(scaleUV(new THREE.CylinderGeometry(1.0,1.2,h,40),5,h/2),glassMats[2]);core.position.y=base+h/2;g.add(core);
-  const n=Math.floor(h/.46),im=new THREE.InstancedMesh(rbox(2.9,.1,2.0,.8),M.shell,n),o=new THREE.Object3D();
-  for(let i=0;i<n;i++){const t=i/(n-1);o.position.set(0,base+.2+i*.46,0);o.rotation.y=t*Math.PI*.8;const s=1-.2*t;o.scale.set(s,1,s);o.updateMatrix();im.setMatrixAt(i,o.matrix)}
-  im.castShadow=true;im.receiveShadow=true;g.add(im);
-  [[0,M.shell,.075],[Math.PI,glow(b.color),.05]].forEach(([ph,mat,tube])=>{const pts=[];for(let i=0;i<=140;i++){const t=i/140,a=ph+t*Math.PI*3.2,r=1.62*(1-.2*t);pts.push(new THREE.Vector3(Math.cos(a)*r,base+.2+t*h,Math.sin(a)*r))}
-    g.add(mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),280,tube,8,false),mat))});
-  const top=base+h;
-  const cap=mesh(new THREE.CylinderGeometry(.5,.95,.7,32),M.shell);cap.position.y=top+.35;g.add(cap);
-  const spire=mesh(new THREE.CylinderGeometry(.02,.1,3.2,8),M.metal);spire.position.y=top+2.2;g.add(spire);
-  const tip=new THREE.Mesh(new THREE.SphereGeometry(.12,10,8),glow(0xff3b5c));tip.position.y=top+3.8;g.add(tip);
-  const halo=new THREE.Mesh(new THREE.TorusGeometry(1.55,.045,8,80),glow(0xf2c14e));halo.rotation.x=Math.PI/2;halo.position.y=top+.9;g.add(halo);
-  const halo2=new THREE.Mesh(new THREE.TorusGeometry(2.1,.03,8,80),glow(b.color));halo2.rotation.x=Math.PI/2;halo2.position.y=top+1.5;g.add(halo2);
-  const lion=lionHolo(2.7);lion.position.y=top+3.3;g.add(lion);
-  cityAnims.push(t=>{lion.rotation.y=t*.45;lion.position.y=top+3.3+Math.sin(t*1.2)*.12;halo2.rotation.z=t*.3;halo2.position.y=top+1.5+Math.sin(t)*.15;tip.material.opacity=1});
-  g.userData.top=top+5;return g}
-function towerStudio(b){ // YouTube Studio: ribbed dome + broadcast mast + play hologram
-  const g=new THREE.Group(),R=3.1,H=Math.max(3.4,b.h*.52),base=.32;
-  const cage=new THREE.Group();cage.position.y=base;cage.scale.set(1,H/R,.84);g.add(cage);
-  cage.add(mesh(new THREE.SphereGeometry(R,48,24,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:0x14070d,metalness:.85,roughness:.12,envMap:ENV,envMapIntensity:1.3,emissive:b.color,emissiveIntensity:.14})));
-  for(let i=0;i<10;i++){const rib=mesh(new THREE.TorusGeometry(R*1.01,.07,8,56,Math.PI),M.shell);rib.rotation.y=i*Math.PI/10;cage.add(rib)}
-  [.32,.62,.86].forEach(k=>{const ring=mesh(new THREE.TorusGeometry(R*1.012*Math.sqrt(1-k*k),.055,8,64),M.shell);ring.rotation.x=Math.PI/2;ring.position.y=R*k;cage.add(ring)});
-  // entrance glow + screen
-  const y=H*.34,zs=.84*R*Math.sqrt(1-Math.pow(y/H,2));
-  const scr=new THREE.Mesh(new THREE.PlaneGeometry(3.2,1.15),new THREE.MeshBasicMaterial({map:ctex(512,184,(gg,w,hh)=>{const gr=gg.createLinearGradient(0,0,w,0);gr.addColorStop(0,'#2a0614');gr.addColorStop(1,'#120418');gg.fillStyle=gr;gg.fillRect(0,0,w,hh);
-    gg.fillStyle='#ff3b5c';gg.font='700 56px "Chakra Petch",sans-serif';gg.textAlign='center';gg.fillText('CR3W STUDIO',w/2,86);gg.fillStyle='#ffd1da';gg.font='500 26px "JetBrains Mono",monospace';gg.fillText('CLIPS · SHORTS · LIVE',w/2,134)}),toneMapped:false}));
-  scr.position.set(0,base+y,zs+.18);scr.rotation.x=-.32;g.add(scr);
-  const door=new THREE.Mesh(new THREE.PlaneGeometry(1.4,1.1),glow(0xffb3c1,.85));door.position.set(0,base+.55,.84*R+.02);g.add(door);
-  const mast=mesh(new THREE.CylinderGeometry(.08,.16,b.h+1.5,10),M.shell);mast.position.set(2.7,base+(b.h+1.5)/2,-1.7);g.add(mast);
-  const dish=mesh(new THREE.SphereGeometry(.6,24,12,0,Math.PI*2,0,Math.PI/2.6),M.pearl);dish.rotation.x=Math.PI*.62;dish.position.set(2.7,base+b.h*.82,-1.4);g.add(dish);
-  const red=new THREE.Mesh(new THREE.SphereGeometry(.13,10,8),glow(0xff3b5c));red.position.set(2.7,base+b.h+1.6,-1.7);g.add(red);
-  // generic play hologram (circle + triangle)
-  const holo=new THREE.Group();holo.position.y=base+H+1.9;g.add(holo);
-  holo.add(new THREE.Mesh(new THREE.RingGeometry(.95,1.12,64),addGlow(0xff3b5c,.9)));
-  const tri=new THREE.Shape();tri.moveTo(-.32,-.42);tri.lineTo(.5,0);tri.lineTo(-.32,.42);tri.closePath();
-  holo.add(new THREE.Mesh(new THREE.ShapeGeometry(tri),addGlow(0xff6b85,.95)));
-  const beam=new THREE.Mesh(new THREE.CylinderGeometry(1.1,.2,1.6,32,1,true),addGlow(0xff3b5c,.08));beam.position.y=-1.1;holo.add(beam);
-  cityAnims.push(t=>{holo.rotation.y=t*.6;holo.position.y=base+H+1.9+Math.sin(t*1.4)*.12;red.visible=Math.sin(t*3)>-.3});
-  g.userData.top=Math.max(base+H+3.2,b.h+2.2);return g}
+function shapeOf(pts){const s=new THREE.Shape();pts.forEach(([x,y],i)=>i?s.lineTo(x,y):s.moveTo(x,y));s.closePath();return s}
+// a flat-faced architectural slab: polygon outline (x across, y up) pushed out to a thickness
+function slab(pts,depth,mat){const g=new THREE.ExtrudeGeometry(shapeOf(pts),{depth,bevelEnabled:true,bevelThickness:.025,bevelSize:.025,bevelSegments:1});g.translate(0,0,-depth/2);return mesh(g,mat)}
+function towerBlade(b){ // CR3W Tower: angular white sci-fi tower with light slits
+  const g=new THREE.Group(),H=b.h*1.3,B=.32;
+  const pale=new THREE.MeshStandardMaterial({color:0xd5dded,metalness:.22,roughness:.36,envMap:ENV,envMapIntensity:1.15});
+  const steel=new THREE.MeshStandardMaterial({color:0xa3b3cb,metalness:.32,roughness:.4,envMap:ENV});
+  const groove=new THREE.MeshStandardMaterial({color:0x1e2536,metalness:.5,roughness:.5});
+  const lightW=glow(0xf2f7ff),amber=glow(0xffa53d);
+  const put=(m,x,y,z)=>{m.position.set(x,y,z);g.add(m);return m};
+  put(slab([[-1.55,0],[1.55,0],[1.55,H*.68],[1.1,H*.76],[-1.55,H*.76]],1.0,steel),0,B,-1.05);              // back mass
+  put(slab([[-1.1,0],[1.1,0],[1.1,H*.9],[.7,H*.95],[-1.1,H*.95]],1.6,pale),0,B,0);                         // core
+  put(slab([[-.8,0],[.55,0],[.55,H*.86],[.15,H*.9],[-.55,H*.9],[-.55,H*.36],[-.8,H*.29]],1.3,pale),-1.6,B,.15); // left wing, flared base
+  put(slab([[-.55,0],[.85,0],[.85,H*.3],[.55,H*.39],[.55,H*.8],[-.55,H*.8]],1.2,steel),1.62,B,-.1);       // right wing
+  // the bright front blade
+  put(slab([[-.98,0],[.98,0],[.98,H*.2],[.44,H*.37],[.44,H],[.22,H+.55],[-.22,H+.55],[-.44,H],[-.44,H*.37],[-.98,H*.2]],.55,M.shell),0,B,1.05);
+  for(let y=H*.4;y<H*.95;y+=1.18)[-.22,.22].forEach(x=>put(new THREE.Mesh(new THREE.BoxGeometry(.07,.86,.05),lightW),x,B+y+.43,1.35));
+  for(let i=0;i<5;i++)[-1,1].forEach(s=>{const c=put(new THREE.Mesh(new THREE.BoxGeometry(.52,.08,.06),lightW),s*.27,B+H*.06+i*.5,1.36);c.rotation.z=s*.45});
+  // carved grooves (the long angled lines on the faces)
+  const line=(x,y,z,len,rz)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(.05,len,.03),groove);m.position.set(x,B+y,z);m.rotation.z=rz;g.add(m)};
+  line(1.62,H*.56,.52,H*.44,0);line(1.9,H*.22,.52,H*.3,.5);line(-1.6,H*.62,.82,H*.42,0);line(-1.78,H*.25,.82,H*.27,-.5);
+  line(0,H*.5,-1.57,H*.38,0);line(-.55,H*.2,-1.57,H*.3,.5);line(.55,H*.2,-1.57,H*.3,-.5);
+  // recessed lit windows
+  [[-1.6,H*.8,.82,.7,.9],[1.62,H*.7,.52,.6,.5],[-1.6,H*.48,.82,.5,.4],[1.62,H*.46,.52,.4,.6]].forEach(([x,y,z,w,h])=>{
+    put(new THREE.Mesh(new THREE.BoxGeometry(w+.12,h+.12,.03),groove),x,B+y,z+.005);put(new THREE.Mesh(new THREE.BoxGeometry(w,h,.03),glow(0xffe3b8,.95)),x,B+y,z+.02)});
+  // small amber running lights
+  const dots=new THREE.InstancedMesh(new THREE.SphereGeometry(.045,8,6),amber,18),o=new THREE.Object3D();
+  for(let i=0;i<18;i++){const f=i%3;o.position.set(f===0?1.62+(rnd()-.5)*.9:f===1?-1.6+(rnd()-.5)*.9:(rnd()-.5)*2.6,B+.6+rnd()*H*.7,f===0?.54:f===1?.84:-1.58);o.updateMatrix();dots.setMatrixAt(i,o.matrix)}g.add(dots);
+  // sweeping fins at the base
+  for(let k=0;k<4;k++){const f=slab([[1.0,0],[3.7,0],[1.0,H*.42]],.12,steel);f.rotation.y=k*Math.PI/2+Math.PI/4;f.position.y=B;g.add(f)}
+  // hook caps on top of the blade
+  [-1,1].forEach(s=>{const hk=put(slab([[0,0],[.3,0],[.3,.75],[.12,.95],[0,.95]],.5,M.shell),s*.3-(s<0?.3:0),B+H*.95,1.05);hk.scale.x=s;hk.position.x=s*.16;
+    put(new THREE.Mesh(new THREE.BoxGeometry(.06,.4,.04),groove),s*.31,B+H*.95+.45,1.33)});
+  const top=B+H+.55;
+  const halo=new THREE.Mesh(new THREE.TorusGeometry(1.5,.045,8,80),glow(0xf2c14e));halo.rotation.x=Math.PI/2;halo.position.y=top+.7;g.add(halo);
+  const halo2=new THREE.Mesh(new THREE.TorusGeometry(2.0,.03,8,80),glow(b.color));halo2.rotation.x=Math.PI/2;halo2.position.y=top+1.3;g.add(halo2);
+  const lion=lionHolo(2.7);lion.position.y=top+3.1;g.add(lion);
+  cityAnims.push(t=>{lion.rotation.y=t*.45;lion.position.y=top+3.1+Math.sin(t*1.2)*.12;halo2.rotation.z=t*.3;halo2.position.y=top+1.3+Math.sin(t)*.15});
+  g.userData.top=top+4.8;return g}
+
+// warm interior glow for the villa glass
+const WARM=ctex(256,128,(g,w,h)=>{const gr=g.createLinearGradient(0,0,0,h);gr.addColorStop(0,'#7a4a1c');gr.addColorStop(.55,'#ffcf8a');gr.addColorStop(1,'#5a3412');g.fillStyle=gr;g.fillRect(0,0,w,h);
+  g.fillStyle='rgba(30,18,8,.55)';for(let i=0;i<7;i++){const x=rnd()*w;g.fillRect(x,h*.62,18+rnd()*40,h*.38)}
+  g.fillStyle='rgba(255,240,210,.9)';for(let i=0;i<4;i++)g.fillRect(rnd()*w,6,26,3);
+  g.fillStyle='rgba(10,8,6,.85)';for(let x=0;x<w;x+=42)g.fillRect(x,0,3,h)});
+WARM.wrapS=THREE.RepeatWrapping;
+function palm(h){const p=new THREE.Group();
+  const trunk=mesh(new THREE.CylinderGeometry(.06,.11,h,8),new THREE.MeshStandardMaterial({color:0x8a6a4a,roughness:.8}));trunk.position.y=h/2;trunk.rotation.z=.06;p.add(trunk);
+  const leaf=new THREE.MeshStandardMaterial({color:0x2f8f4e,roughness:.6,envMap:ENV,envMapIntensity:.3,side:THREE.DoubleSide});
+  for(let k=0;k<9;k++){const hold=new THREE.Group();hold.position.y=h;hold.rotation.y=k/9*Math.PI*2;p.add(hold);
+    const geo=new THREE.ConeGeometry(.17,1.5,4);geo.translate(0,.75,0);const f=mesh(geo,leaf);f.scale.z=.22;f.rotation.z=1.15+(k%2)*.25;hold.add(f)}
+  return p}
+function sportsCar(){const c=new THREE.Group();
+  const paint=new THREE.MeshStandardMaterial({color:0x07080c,metalness:.85,roughness:.15,envMap:ENV,envMapIntensity:1.6});
+  const body=mesh(rbox(.95,.26,2.05,.42),paint);body.position.y=.12;c.add(body);
+  const cab=mesh(rbox(.74,.22,.95,.34),new THREE.MeshStandardMaterial({color:0x0b0d16,metalness:.9,roughness:.05,envMap:ENV}));cab.position.set(0,.37,-.12);c.add(cab);
+  [[-.47,.62],[.47,.62],[-.47,-.62],[.47,-.62]].forEach(([x,z])=>{const w=mesh(new THREE.CylinderGeometry(.17,.17,.14,16),M.graphite);w.rotation.z=Math.PI/2;w.position.set(x,.17,z);c.add(w)});
+  const tail=new THREE.Mesh(new THREE.BoxGeometry(.88,.035,.02),glow(0xff2a44));tail.position.set(0,.33,-1.04);c.add(tail);
+  [-.3,.3].forEach(x=>{const hl=new THREE.Mesh(new THREE.BoxGeometry(.18,.03,.02),glow(0xfff4e0));hl.position.set(x,.3,1.04);c.add(hl)});
+  return c}
+function towerVilla(b){ // YouTube Studio: stacked black-and-glass luxury tower with warm interiors
+  const g=new THREE.Group(),B=.32,LH=2.35,levels=Math.max(3,Math.round(b.h/LH));
+  const black=new THREE.MeshStandardMaterial({color:0x101116,metalness:.45,roughness:.3,envMap:ENV});
+  const led=glow(0xffc477),plant=new THREE.MeshStandardMaterial({color:0x2e7d4a,roughness:.8});
+  const lay=[[0,0,5.0,3.6],[.55,.45,5.5,3.3],[-.45,-.15,4.8,3.8],[.4,.55,5.3,3.0],[-.3,0,4.6,3.4],[.35,.35,5.0,3.2]];
+  for(let i=0;i<levels;i++){
+    const [dx,dz,w,d]=lay[i%lay.length],y=B+i*LH;
+    const fl=mesh(new THREE.BoxGeometry(w+.25,.24,d+.25),black);fl.position.set(dx,y+.12,dz);g.add(fl);
+    if(i>0){const soffit=mesh(new THREE.BoxGeometry(w+.2,.03,d+.2),M.wood,false);soffit.position.set(dx,y-.005,dz);g.add(soffit)}
+    const gm=new THREE.MeshStandardMaterial({color:0x2a1e14,map:WARM,emissive:0xffffff,emissiveMap:WARM,emissiveIntensity:.95,metalness:.55,roughness:.08,envMap:ENV});
+    const gl=mesh(scaleUV(new THREE.BoxGeometry(w-.4,LH-.3,d-.4),w/2.2,1),gm);gl.position.set(dx,y+.24+(LH-.3)/2,dz);g.add(gl);
+    [[-1,1],[1,1],[-1,-1],[1,-1]].forEach(([sx,sz])=>{const col=mesh(new THREE.BoxGeometry(.18,LH-.24,.18),black);col.position.set(dx+sx*(w/2-.05),y+.24+(LH-.24)/2,dz+sz*(d/2-.05));g.add(col)});
+    const strip=new THREE.Mesh(new THREE.BoxGeometry(w+.25,.035,.03),led);strip.position.set(dx,y+.03,dz+(d+.25)/2+.005);g.add(strip);
+    const side=new THREE.Mesh(new THREE.BoxGeometry(.03,.035,d+.25),led);side.position.set(dx+(i%2?1:-1)*((w+.25)/2+.005),y+.03,dz);g.add(side);
+    if(i%2===0){for(let k=0;k<7;k++){const fin=mesh(new THREE.BoxGeometry(.06,LH-.3,.16),black);fin.position.set(dx+(w/2-.05),y+.24+(LH-.3)/2,dz-d/2+.3+k*(d-.6)/6);g.add(fin)}}
+    if(i%2===1){const rail=new THREE.Mesh(new THREE.PlaneGeometry(w-.2,.5),new THREE.MeshStandardMaterial({color:0x9fb6d8,transparent:true,opacity:.22,metalness:1,roughness:0,envMap:ENV,depthWrite:false}));rail.position.set(dx,y+.5,dz+d/2+.13);g.add(rail);
+      const box=mesh(new THREE.BoxGeometry(w*.5,.25,.3),black);box.position.set(dx-w*.15,y+.37,dz+d/2-.05);g.add(box);
+      for(let k=0;k<6;k++){const s=mesh(new THREE.SphereGeometry(.17,8,6),plant,false);s.position.set(dx-w*.38+k*w*.1,y+.56,dz+d/2-.05);g.add(s)}}
+  }
+  const roofY=B+levels*LH,[rx,rz,rw,rd]=lay[levels%lay.length];
+  const roof=mesh(new THREE.BoxGeometry(rw+.4,.3,rd+.4),black);roof.position.set(rx,roofY+.15,rz);g.add(roof);
+  const roofLed=new THREE.Mesh(new THREE.BoxGeometry(rw+.4,.04,.03),led);roofLed.position.set(rx,roofY+.3,rz+(rd+.4)/2+.005);g.add(roofLed);
+  const rp=palm(1.7);rp.position.set(rx-1.4,roofY+.3,rz-.6);g.add(rp);
+  // sign
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(2.6,.5),new THREE.MeshBasicMaterial({map:ctex(512,100,(gg,w,h)=>{gg.clearRect(0,0,w,h);gg.fillStyle='#ffffff';gg.font='700 58px "Chakra Petch",sans-serif';gg.textAlign='center';gg.fillText('CR3W STUDIO',w/2,70);gg.fillStyle='#ff3b5c';gg.fillRect(w/2-150,84,300,6)}),transparent:true,toneMapped:false}));
+  const [sx,sz,,sd]=lay[(levels-1)%lay.length];sign.position.set(sx,B+(levels-1)*LH+.13,sz+(sd+.25)/2+.02);sign.scale.setScalar(.75);g.add(sign);
+  // garden + car at the entrance
+  [[-2.3,2.7],[2.5,2.4]].forEach(([x,z])=>{const p=palm(2.6);p.position.set(x,B,z);g.add(p)});
+  [[-2.6,-1.5],[2.7,-1.3]].forEach(([x,z])=>{const hd=mesh(rbox(.6,.6,2.4,.2),plant);hd.position.set(x,B,z);g.add(hd)});
+  const fl=new THREE.InstancedMesh(new THREE.SphereGeometry(.09,6,4),new THREE.MeshStandardMaterial({color:0xff8fc8,emissive:0x8a2d5c,emissiveIntensity:.3}),40),o=new THREE.Object3D();
+  for(let i=0;i<40;i++){const s=i<20?-1:1;o.position.set(s*(1.2+rnd()*1.0),B+.1,2.6+rnd()*.8);o.updateMatrix();fl.setMatrixAt(i,o.matrix)}g.add(fl);
+  const car=sportsCar();car.position.set(.9,B,3.1);car.rotation.y=-1.25;g.add(car);
+  // play hologram above the roof
+  const holo=new THREE.Group();holo.position.set(rx,roofY+2.2,rz);g.add(holo);
+  holo.add(new THREE.Mesh(new THREE.RingGeometry(.85,1.0,64),addGlow(0xff3b5c,.9)));
+  const tri=new THREE.Shape();tri.moveTo(-.29,-.38);tri.lineTo(.45,0);tri.lineTo(-.29,.38);tri.closePath();holo.add(new THREE.Mesh(new THREE.ShapeGeometry(tri),addGlow(0xff6b85,.95)));
+  const beam=new THREE.Mesh(new THREE.CylinderGeometry(1.0,.2,1.5,32,1,true),addGlow(0xff3b5c,.08));beam.position.y=-1.05;holo.add(beam);
+  cityAnims.push(t=>{holo.rotation.y=t*.6;holo.position.y=roofY+2.2+Math.sin(t*1.4)*.12});
+  g.userData.top=roofY+3.6;return g}
 function towerSlab(b){ // striped glass block (future buildings)
   const g=new THREE.Group(),h=b.h,base=.32;
   const box=mesh(scaleUV(new THREE.BoxGeometry(4.2,h,3.2),4,h/2),glassMats[0]);box.position.y=base+h/2;g.add(box);
@@ -412,7 +472,7 @@ function towerSpire(b){ // angular white spire (future buildings)
     const slit=new THREE.Mesh(new THREE.BoxGeometry(.06,h*hf*.8,w*.5),glow(b.color));slit.position.set(dx+w*.32,base+h*hf*.45,i*.3);g.add(slit)});
   g.userData.top=h+2;return g}
 function emptyLot(b){const g=new THREE.Group();for(let i=0;i<4;i++){const c=mesh(new THREE.ConeGeometry(.25,.7,10),new THREE.MeshStandardMaterial({color:0xff8a3d,emissive:0xff8a3d,emissiveIntensity:.4}));c.position.set(Math.cos(i*Math.PI/2)*2.6,.65,Math.sin(i*Math.PI/2)*2.6);g.add(c)}g.userData.top=2;return g}
-const STYLES={cr3w:towerTwist,youtube:towerStudio,etsy:towerSlab,contract:towerSlab,gamedev:towerSpire,lot:emptyLot};
+const STYLES={cr3w:towerBlade,youtube:towerVilla,etsy:towerSlab,contract:towerSlab,gamedev:towerSpire,lot:emptyLot};
 
 const pickCity=[],labels={},groups={},beams={};
 function buildBusinesses(){
@@ -793,7 +853,7 @@ async function load(){
     await fontsReady;
     BIZ=j.businesses;RUNS=j.runsToday||0;banner.hidden=true;live.textContent=j.stale?'Delayed':'Live';live.className=j.stale?'tag':'tag live';
     document.getElementById('runs').textContent=RUNS;
-    if(!built){buildSkyline();buildBusinesses();built=true}else refreshBusinesses();
+    if(!built){buildSkyline();buildBusinesses();clearTrees();built=true}else refreshBusinesses();
     updateCounter();counts();renderFeed(j.feed||[]);
     if(mode==='office'){refreshOffice();renderPanel()}
   }catch(err){live.textContent='Offline';live.className='tag down';showBanner('Can\'t reach your bots right now. '+err.message)}
