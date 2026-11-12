@@ -923,7 +923,10 @@ async function load(){
     if(!built){buildSkyline();buildBusinesses();clearTrees();built=true}else refreshBusinesses();
     updateCounter();counts();renderFeed(j.feed||[]);
     if(mode==='office'){refreshOffice();renderPanel()}
-  }catch(err){live.textContent='Offline';live.className='tag down';showBanner('Can\'t reach your bots right now. '+err.message)}
+  }catch(err){live.textContent='Offline';live.className='tag down';
+    const why=/401|Unauthorized/.test(err.message)?' n8n rejected the City\'s token. Re-enter your n8n MCP token at city.cr3winc.com/setup.':' '+err.message;
+    showBanner('Can\'t reach your bots right now.'+why);
+    if(!built){try{const r=await api('/api/layout');if(r.ok){const j=await r.json();await fontsReady;BIZ=j.businesses;buildSkyline();buildBusinesses();clearTrees();built=true;updateCounter()}}catch{}}}
 }
 load();setInterval(load,60000);
 

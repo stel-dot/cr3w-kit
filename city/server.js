@@ -36,7 +36,7 @@ label{display:grid;gap:6px;font-size:14px}input,textarea{font:inherit;padding:10
 textarea{min-height:90px;font-size:12px}button{font:inherit;padding:12px;border:0;border-radius:8px;background:#7c5cff;color:#fff;font-weight:600}
 #msg{color:#ff8a8a;font-size:14px;min-height:1em}</style></head><body>
 <form id="f"><h1>Set up CR3W City</h1>
-<p>One time only. This connects the city to your n8n and sets the password you'll use to open it.</p>
+<p>Connects the city to your n8n and sets the password you'll use to open it. Come back here any time your n8n MCP token changes.</p>
 <label>Setup code (shown on the server after install)<input name="code" autocomplete="off" required></label>
 <label>n8n MCP token (n8n &rarr; Settings &rarr; Instance-level MCP &rarr; Connect &rarr; API key)<textarea name="token" required></textarea></label>
 <label>Choose a CR3W City password<input name="password" type="password" minlength="6" required></label>
@@ -336,7 +336,7 @@ function sendJson(res, code, obj) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname === '/setup') {
-    if (!needsSetup()) { res.writeHead(302, { Location: '/' }); return res.end(); }
+    if (!CONFIG_FILE || !SETUP_CODE) { res.writeHead(302, { Location: '/' }); return res.end(); }  // always reachable on the server so the token can be updated; still needs the setup code
     if (req.method === 'GET') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return res.end(SETUP_HTML); }
     if (req.method === 'POST') {
       let d = {};
@@ -358,6 +358,9 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 401, { error: 'Wrong or missing password' });
   }
   try {
+    if (req.method === 'GET' && url.pathname === '/api/layout') {
+      return sendJson(res, 200, { businesses: BUSINESSES.map(b => ({ ...b, bots: [] })), feed: [], runsToday: 0 });
+    }
     if (req.method === 'GET' && url.pathname === '/api/city') {
       return sendJson(res, 200, await cityData());
     }
