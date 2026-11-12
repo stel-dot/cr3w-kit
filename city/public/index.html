@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CR3W City</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="theme-color" content="#0e0c1c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --night:#070a1f; --deck:#0e1438; --glass:rgba(14,20,56,.88); --line:#26306b;
+  --ink:#eef0ff; --dim:#9aa3d6; --accent:#7c5cff;
+  --ok:#2bd99a; --wait:#ffb547; --bad:#ff4f6d; --off:#6b7299;
+  --f-display:"Chakra Petch",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--night);color:var(--ink);font-family:var(--f-body);overflow:hidden}
+#scene{position:fixed;inset:0;display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+#scene.drag{cursor:grabbing}
+.hud{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:calc(12px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 12px max(16px,env(safe-area-inset-left,0px));
+  background:linear-gradient(var(--night),transparent);pointer-events:none}
+.hud>*{pointer-events:auto}
+.brand{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:.06em;text-transform:uppercase}
+.brand span{color:var(--accent)}
+.tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border:1px solid var(--line);border-radius:4px;padding:3px 7px}
+.tag.live{color:var(--ok);border-color:var(--ok)}
+.tag.down{color:var(--bad);border-color:var(--bad)}
+.vault{margin-left:auto;font-family:var(--f-mono);font-size:13px;background:var(--glass);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-variant-numeric:tabular-nums}
+.vault b{color:var(--ok);font-weight:600}
+.counts{display:flex;gap:6px;font-family:var(--f-mono);font-size:12px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;background:var(--glass);border:1px solid var(--line)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--off);flex:none}
+.dot.running{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.dot.waiting{background:var(--wait);box-shadow:0 0 8px var(--wait)}
+.dot.error{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+.hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:4;font-size:13px;color:var(--dim);background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:7px 14px;white-space:nowrap}
+.feed{position:fixed;z-index:4;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(60px + env(safe-area-inset-bottom,0px));width:min(340px,calc(100% - 32px));display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.ev{font-family:var(--f-mono);font-size:11.5px;line-height:1.4;background:var(--glass);border:1px solid var(--line);border-left:3px solid var(--ok);border-radius:4px;padding:6px 9px}
+.ev.bad{border-left-color:var(--bad)}
+.ev time{color:var(--dim);margin-right:6px}
+.banner{position:fixed;z-index:7;top:calc(64px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);width:min(560px,calc(100% - 32px));background:#3a1020;border:1px solid var(--bad);color:var(--ink);border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.45}
+.panel{position:fixed;z-index:6;top:calc(64px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:400px;background:var(--glass);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;overflow:hidden}
+.p-head{padding:16px 16px 12px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start}
+.p-head h2{margin:0;font-family:var(--f-display);font-size:22px;letter-spacing:.03em}
+.p-head p{margin:4px 0 0;color:var(--dim);font-size:13px}
+.close{margin-left:auto;background:none;border:1px solid var(--line);color:var(--ink);border-radius:6px;width:32px;height:32px;font-size:18px;cursor:pointer;flex:none}
+#p-content{display:flex;flex-direction:column;min-height:0;flex:1}
+.floor-label{padding:12px 16px 8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.desks{overflow-y:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.desk{border:1px solid var(--line);border-radius:8px;background:rgba(7,10,31,.6)}
+.desk.error{border-color:var(--bad)}
+.desk-top{display:flex;gap:10px;align-items:center;padding:10px 12px}
+.bot-face{width:36px;height:36px;border-radius:8px;display:grid;place-items:center;background:var(--deck);border:1px solid var(--line);flex:none}
+.bot-face svg{width:22px;height:22px}
+.desk h3{margin:0;font-size:15px;font-weight:600}
+.desk .job{margin:2px 0 0;font-size:12.5px;color:var(--dim)}
+.status{margin-left:auto;font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px;flex:none}
+.desk-body{padding:0 12px 10px 58px;font-family:var(--f-mono);font-size:12px;display:grid;gap:3px}
+.desk-body span{color:var(--dim)}
+.desk-body .err{color:var(--bad)}
+.actions{display:flex;gap:8px;padding:0 12px 12px 58px;flex-wrap:wrap}
+.btn{font-family:var(--f-body);font-size:13px;font-weight:500;color:var(--ink);background:var(--deck);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer;text-decoration:none}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:wait}
+.btn:focus-visible,.close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.empty{padding:20px 16px;color:var(--dim);font-size:14px;line-height:1.5}
+.empty b{color:var(--ink)}
+.login{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(7,10,31,.92);padding:16px}
+.login form{width:min(340px,100%);background:var(--deck);border:1px solid var(--line);border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:12px}
+.login h2{margin:0;font-family:var(--f-display);letter-spacing:.06em;text-transform:uppercase}
+.login h2 span{color:var(--accent)}
+.login p{margin:0;color:var(--dim);font-size:14px}
+.login input{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--night);color:var(--ink)}
+.login .err{color:var(--bad);font-size:13px;min-height:1em}
+@media (max-width:720px){
+  .panel{top:auto;left:0;right:0;bottom:0;width:auto;max-height:65%;border-radius:14px 14px 0 0;padding-bottom:env(safe-area-inset-bottom,0px)}
+  .counts{display:none}
+  body.open .feed,body.open .hint{display:none}
+  .brand{font-size:17px}
+}
+</style>
+</head>
+<body>
+<div class="hud">
+  <div class="brand">CR3W <span>City</span></div>
+  <div class="tag" id="live">Connecting…</div>
+  <div class="counts" id="counts"></div>
+  <div class="vault">Bot runs today <b id="runs">–</b></div>
+</div>
+<div class="login" id="login" hidden>
+  <form id="login-form">
+    <h2>CR3W <span>City</span></h2>
+    <p>Enter your dashboard password.</p>
+    <input type="password" id="pass" autocomplete="current-password" placeholder="Password" required>
+    <button class="btn primary" type="submit">Enter the city</button>
+    <div class="err" id="login-err"></div>
+  </form>
+</div>
+<canvas id="scene" aria-label="3D city of business buildings. Tap a building to open its office."></canvas>
+<div class="banner" id="banner" hidden></div>
+<div class="feed" id="feed" aria-live="polite"></div>
+<div class="hint" id="hint">Drag to look around · Tap a building to enter</div>
+<aside class="panel" id="panel" hidden aria-label="Office">
+  <div class="p-head">
+    <div><h2 id="p-title"></h2><p id="p-sub"></p></div>
+    <button class="close" id="close" aria-label="Back to city">×</button>
+  </div>
+  <div id="p-content"></div>
+</aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const STATUS={running:{label:'Running',hex:0x2bd99a},waiting:{label:'Manual',hex:0xffb547},error:{label:'Needs you',hex:0xff4f6d},paused:{label:'Off',hex:0x6b7299}};
+let BIZ=[];let current=null;
+
+const canvas=document.getElementById('scene');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x070a1f);
+scene.fog=new THREE.Fog(0x070a1f,40,95);
+const camera=new THREE.PerspectiveCamera(50,1,.1,300);
+scene.add(new THREE.AmbientLight(0x6670c0,.55));
+const dl=new THREE.DirectionalLight(0xffffff,.6);dl.position.set(10,25,12);scene.add(dl);
+const ground=new THREE.Mesh(new THREE.CircleGeometry(60,64),new THREE.MeshStandardMaterial({color:0x0b1033,roughness:.9}));
+ground.rotation.x=-Math.PI/2;scene.add(ground);
+const grid=new THREE.GridHelper(120,60,0x1c2460,0x141a4a);grid.position.y=.01;scene.add(grid);
+function ring(r,c,o){const m=new THREE.Mesh(new THREE.RingGeometry(r,r+.18,96),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:o,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;m.position.y=.03;scene.add(m)}
+ring(17,0x7c5cff,.8);ring(18.2,0x2bd9c4,.35);
+const winTex=(()=>{const c=document.createElement('canvas');c.width=64;c.height=128;const g=c.getContext('2d');g.fillStyle='#10164a';g.fillRect(0,0,64,128);
+  for(let y=4;y<128;y+=8)for(let x=4;x<64;x+=8){if(Math.random()<.45){g.fillStyle=Math.random()<.8?'#dfe6ff':'#ffd58a';g.fillRect(x,y,4,4)}}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t})();
+for(let i=0;i<70;i++){const a=Math.random()*Math.PI*2,r=26+Math.random()*28,h=2+Math.random()*9,w=1.2+Math.random()*2.2;
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,w),new THREE.MeshStandardMaterial({color:0x2a3270,map:winTex,emissive:0x3a4499,emissiveMap:winTex,emissiveIntensity:.5}));
+  m.position.set(Math.cos(a)*r,h/2,Math.sin(a)*r);scene.add(m)}
+function label(text,sub,color){const c=document.createElement('canvas');c.width=512;c.height=160;const g=c.getContext('2d');
+  g.fillStyle='rgba(14,20,56,.9)';g.strokeStyle=color;g.lineWidth=4;g.beginPath();g.roundRect?g.roundRect(8,8,496,144,18):g.rect(8,8,496,144);g.fill();g.stroke();
+  g.fillStyle='#eef0ff';g.font='700 52px "Chakra Petch", sans-serif';g.textAlign='center';g.fillText(text,256,74);
+  g.fillStyle='#9aa3d6';g.font='500 30px "JetBrains Mono", monospace';g.fillText(sub,256,124);
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthTest:false}));s.scale.set(6.4,2,1);return s}
+const hexCss=n=>'#'+n.toString(16).padStart(6,'0');
+function worst(b){for(const s of ['error','running','waiting','paused'])if(b.bots.some(x=>x.status===s))return s;return 'paused'}
+function subText(b){return b.bots.length?b.bots.length+' bots · '+STATUS[worst(b)].label:b.sub}
+
+const pickables=[],beams={},labels={},groups={};
+function buildCity(){
+  BIZ.forEach(b=>{
+    const grp=new THREE.Group();grp.position.set(b.x,0,b.z);grp.userData.id=b.id;scene.add(grp);groups[b.id]=grp;
+    const pad=new THREE.Mesh(new THREE.CylinderGeometry(4.2,4.4,.3,40),new THREE.MeshStandardMaterial({color:0x121a4a,emissive:b.color,emissiveIntensity:.15}));pad.position.y=.15;grp.add(pad);
+    const glow=new THREE.Mesh(new THREE.RingGeometry(4.3,4.6,48),new THREE.MeshBasicMaterial({color:b.color,side:THREE.DoubleSide}));glow.rotation.x=-Math.PI/2;glow.position.y=.32;grp.add(glow);
+    if(b.h>0){
+      const lit=b.bots.length>0;
+      const mat=new THREE.MeshStandardMaterial({color:0x2c3580,map:winTex,emissive:b.color,emissiveMap:winTex,emissiveIntensity:lit?.55:.12});
+      const main=new THREE.Mesh(new THREE.BoxGeometry(2.6,b.h,2.6),mat);main.position.y=b.h/2+.3;grp.add(main);
+      const s1=new THREE.Mesh(new THREE.BoxGeometry(1.8,b.h*.55,1.8),mat);s1.position.set(-2,b.h*.275+.3,.8);grp.add(s1);
+      const s2=new THREE.Mesh(new THREE.BoxGeometry(1.6,b.h*.4,1.6),mat);s2.position.set(1.9,b.h*.2+.3,-.9);grp.add(s2);
+      const crown=new THREE.Mesh(new THREE.TorusGeometry(1.6,.08,8,40),new THREE.MeshBasicMaterial({color:b.color}));crown.rotation.x=Math.PI/2;crown.position.y=b.h+.6;grp.add(crown);
+      if(lit){const beam=new THREE.Mesh(new THREE.CylinderGeometry(.35,.35,40,16,1,true),new THREE.MeshBasicMaterial({color:STATUS[worst(b)].hex,transparent:true,opacity:.35,blending:THREE.AdditiveBlending,depthWrite:false}));beam.position.y=b.h+20;grp.add(beam);beams[b.id]=beam}
+    }else{
+      for(let i=0;i<4;i++){const cone=new THREE.Mesh(new THREE.ConeGeometry(.25,.7,8),new THREE.MeshStandardMaterial({color:0xff8a3d,emissive:0xff8a3d,emissiveIntensity:.4}));cone.position.set(Math.cos(i*Math.PI/2)*2.6,.65,Math.sin(i*Math.PI/2)*2.6);grp.add(cone)}
+    }
+    const lb=label(b.name,subText(b),hexCss(b.color));lb.position.y=(b.h||1)+3;grp.add(lb);labels[b.id]=lb;
+    grp.traverse(o=>{if(o.isMesh)pickables.push(o)});
+  });
+}
+function refreshCity(){
+  BIZ.forEach(b=>{
+    if(beams[b.id])beams[b.id].material.color.setHex(STATUS[worst(b)].hex);
+    const old=labels[b.id];if(!old)return;const nl=label(b.name,subText(b),hexCss(b.color));nl.position.copy(old.position);old.parent.add(nl);old.parent.remove(old);labels[b.id]=nl;
+  });
+}
+
+const vault=new THREE.Group();vault.position.set(0,0,6.5);scene.add(vault);
+const dome=new THREE.Mesh(new THREE.SphereGeometry(1.6,32,16,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:0xe9c78a,emissive:0x8a6a2a,emissiveIntensity:.4,metalness:.5,roughness:.3}));dome.position.y=1;vault.add(dome);
+const base=new THREE.Mesh(new THREE.CylinderGeometry(1.7,1.9,1,24),new THREE.MeshStandardMaterial({color:0x3a2a3f,emissive:0xff4f6d,emissiveIntensity:.2}));base.position.y=.5;vault.add(base);
+
+const view={theta:.6,phi:1.0,r:30,tx:0,ty:3,tz:1};const goal={...view};
+function applyCam(){camera.position.set(view.tx+view.r*Math.sin(view.phi)*Math.sin(view.theta),view.ty+view.r*Math.cos(view.phi),view.tz+view.r*Math.sin(view.phi)*Math.cos(view.theta));camera.lookAt(view.tx,view.ty,view.tz)}
+let down=null,moved=0;
+canvas.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};moved=0;canvas.setPointerCapture(e.pointerId);canvas.classList.add('drag')});
+canvas.addEventListener('pointermove',e=>{if(!down)return;const dx=e.clientX-down.x,dy=e.clientY-down.y;moved+=Math.abs(dx)+Math.abs(dy);goal.theta-=dx*.006;goal.phi=Math.min(1.35,Math.max(.35,goal.phi-dy*.004));down={x:e.clientX,y:e.clientY}});
+canvas.addEventListener('pointerup',e=>{canvas.classList.remove('drag');if(down&&moved<8)pick(e);down=null});
+canvas.addEventListener('wheel',e=>{e.preventDefault();goal.r=Math.min(70,Math.max(14,goal.r+e.deltaY*.03))},{passive:false});
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
+function pick(e){const r=canvas.getBoundingClientRect();ndc.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(ndc,camera);const hit=ray.intersectObjects(pickables,false)[0];if(!hit)return;let o=hit.object;while(o&&!o.userData.id)o=o.parent;if(o)openBiz(o.userData.id)}
+
+const panel=document.getElementById('panel'),pTitle=document.getElementById('p-title'),pSub=document.getElementById('p-sub'),pContent=document.getElementById('p-content');
+const face=c=>`<svg viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8"><rect x="4" y="7" width="16" height="12" rx="3"/><circle cx="9" cy="13" r="1.4" fill="${c}"/><circle cx="15" cy="13" r="1.4" fill="${c}"/><path d="M12 7V4M10 4h4"/></svg>`;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function openBiz(id){
+  const b=BIZ.find(x=>x.id===id);if(!b)return;current=id;
+  Object.assign(goal,{tx:b.x,ty:(b.h||2)*.5,tz:b.z,r:Math.max(16,(b.h||4)*2.2)});
+  renderPanel();panel.hidden=false;document.body.classList.add('open');document.getElementById('hint').hidden=true;
+}
+function renderPanel(){
+  const b=BIZ.find(x=>x.id===current);if(!b)return;
+  pTitle.textContent=b.name;pSub.textContent=b.sub;
+  if(!b.bots.length){pContent.innerHTML=`<div class="empty"><b>No bots here yet.</b><br>${b.id==='lot'?'This lot is for your next business, like a box truck route or an Amazon store.':'This building opens when its first bot is built.'} Every bot you add gets a desk inside.</div>`;return}
+  pContent.innerHTML=`<div class="floor-label">Office floor · ${b.bots.length} desks</div><div class="desks">${b.bots.map(bot=>{const st=STATUS[bot.status];
+    let toggle='';
+    if(bot.kind==='auto')toggle=bot.active?`<button class="btn" data-id="${esc(bot.id)}" data-a="deactivate">Turn off</button>`:`<button class="btn primary" data-id="${esc(bot.id)}" data-a="activate">Turn on</button>`;
+    return `<div class="desk ${bot.status}">
+      <div class="desk-top"><div class="bot-face">${face(hexCss(st.hex))}</div><div><h3>${esc(bot.name)}</h3><p class="job">${esc(bot.job)}</p></div><div class="status"><span class="dot ${bot.status}"></span>${st.label}</div></div>
+      <div class="desk-body"><div><span>Schedule </span>${esc(bot.schedule)}</div><div><span>Today </span>${esc(bot.today)}</div><div><span>Last run </span>${esc(bot.last)}</div>${bot.err?`<div class="err">${esc(bot.err)}</div>`:''}</div>
+      <div class="actions">${toggle}<a class="btn" href="${esc(bot.editorUrl)}" target="_blank" rel="noopener">${bot.kind==='manual'?'Run in n8n':'Open in n8n'}</a></div></div>`}).join('')}</div>`;
+}
+pContent.addEventListener('click',async e=>{
+  const btn=e.target.closest('button[data-a]');if(!btn)return;
+  btn.disabled=true;btn.textContent='Working…';
+  try{const r=await api('/api/bots/'+encodeURIComponent(btn.dataset.id)+'/'+btn.dataset.a,{method:'POST'});const j=await r.json();if(!r.ok)throw new Error(j.error||'Failed');await load()}
+  catch(err){showBanner('Could not change that bot: '+err.message);btn.disabled=false}
+});
+document.getElementById('close').addEventListener('click',closeBiz);
+addEventListener('keydown',e=>{if(e.key==='Escape')closeBiz()});
+function closeBiz(){current=null;panel.hidden=true;document.body.classList.remove('open');Object.assign(goal,{tx:0,ty:3,tz:1,r:30})}
+
+const live=document.getElementById('live'),banner=document.getElementById('banner');
+let PASS='';try{PASS=localStorage.getItem('cr3w-pass')||''}catch{}
+const loginBox=document.getElementById('login');
+function api(url,opts={}){return fetch(url,{...opts,headers:{...(opts.headers||{}),'x-cr3w-pass':PASS}})}
+document.getElementById('login-form').addEventListener('submit',async e=>{
+  e.preventDefault();PASS=document.getElementById('pass').value;
+  const r=await api('/api/city');
+  if(r.status===401){document.getElementById('login-err').textContent='That password is not right. Try again.';return}
+  try{localStorage.setItem('cr3w-pass',PASS)}catch{}
+  loginBox.hidden=true;load();
+});
+function showBanner(msg){banner.textContent=msg;banner.hidden=false}
+function counts(){const all=BIZ.flatMap(b=>b.bots);const n=s=>all.filter(x=>x.status===s).length;
+  document.getElementById('counts').innerHTML=[['running','on'],['waiting','manual'],['error','need you']].map(([s,l])=>`<span class="chip"><span class="dot ${s}"></span>${n(s)} ${l}</span>`).join('')}
+function renderFeed(feed){document.getElementById('feed').innerHTML=feed.slice(0,4).map(f=>`<div class="ev ${f.ok?'':'bad'}"><time>${esc(f.time)}</time>${esc(f.msg)}</div>`).join('')}
+let built=false;
+async function load(){
+  try{
+    const r=await api('/api/city');
+    if(r.status===401){loginBox.hidden=false;live.textContent='Locked';live.className='tag';return}
+    const j=await r.json();if(!r.ok)throw new Error(j.error||'Could not reach n8n');
+    BIZ=j.businesses;banner.hidden=true;live.textContent=j.stale?'Delayed':'Live';live.className=j.stale?'tag':'tag live';
+    document.getElementById('runs').textContent=j.runsToday;
+    if(!built){buildCity();built=true}else refreshCity();
+    counts();renderFeed(j.feed);if(current)renderPanel();
+  }catch(err){live.textContent='Offline';live.className='tag down';showBanner('Can\'t reach your bots right now. '+err.message)}
+}
+load();setInterval(load,60000);
+
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<720?62:50;camera.updateProjectionMatrix()}
+addEventListener('resize',resize);resize();
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;let t=0;
+(function loop(){requestAnimationFrame(loop);t+=.016;
+  for(const k of ['theta','phi','r','tx','ty','tz'])view[k]+=(goal[k]-view[k])*.08;
+  if(!current&&!down&&!reduce)goal.theta+=.0007;applyCam();
+  Object.values(beams).forEach((bm,i)=>{bm.material.opacity=.25+.08*Math.sin(t*2+i)});
+  dome.rotation.y+=.004;renderer.render(scene,camera)})();
+</script>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});</script>
+</body>
+</html>
