@@ -1,0 +1,80 @@
+# CR3W n8n server: n8n + PostgreSQL database + Caddy (automatic HTTPS)
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: n8n
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n -d n8n"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: ${DB_PASSWORD}
+      N8N_HOST: ${N8N_HOST}
+      N8N_PROTOCOL: https
+      N8N_PORT: 5678
+      WEBHOOK_URL: https://${N8N_HOST}/
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      GENERIC_TIMEZONE: America/New_York
+      TZ: America/New_York
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_PROXY_HOPS: 1
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: 336
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./files:/files
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      N8N_HOST: ${N8N_HOST}
+      CITY_HOST: ${CITY_HOST:-city.cr3winc.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - n8n
+
+  # CR3W City dashboard (installed with install-city.sh). Waits quietly if not installed yet.
+  city:
+    image: node:22-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: ["sh", "-c", "if [ -f server.js ]; then exec node server.js; else echo 'CR3W City not installed'; exec sleep infinity; fi"]
+    environment:
+      PORT: "3000"
+      N8N_BASE_URL: https://${N8N_HOST}
+      CONFIG_FILE: /data/config.json
+      SETUP_CODE: ${SETUP_CODE:-}
+    volumes:
+      - ./city:/app:ro
+      - ./city-data:/data
+
+volumes:
+  db_data:
+  n8n_data:
+  caddy_data:
+  caddy_config:

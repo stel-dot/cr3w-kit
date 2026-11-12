@@ -1,0 +1,7 @@
+{$N8N_HOST} {
+	reverse_proxy n8n:5678
+}
+
+{$CITY_HOST} {
+	reverse_proxy city:3000
+}
