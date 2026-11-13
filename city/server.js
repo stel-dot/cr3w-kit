@@ -77,7 +77,7 @@ const BOT_INFO = {
   'Review Survey': { biz: 'cr3w', job: 'The survey page customers fill out', kind: 'auto', schedule: 'Always on (survey page)' },
   'Clip Scout': { biz: 'youtube', job: 'Finds the best stream moments from your 7 streamers', kind: 'auto', schedule: 'Every 6 hours' },
   'Clip Editor': { biz: 'youtube', job: 'Turns top moments into Shorts and sends them to you', kind: 'auto', schedule: 'Every 2 hours, 8 AM to 10 PM' },
-  'Studio Inbox': { biz: 'youtube', job: 'Handles your Posted / Skip taps on each Short', kind: 'auto', schedule: 'Always on (email buttons)' },
+  'Studio Inbox': { biz: 'youtube', job: 'Handles your Approve / Decline / Posted choices', kind: 'auto', schedule: 'Always on (email buttons)' },
   'Compilation Builder': { biz: 'youtube', job: 'Builds the weekly 4 to 10 minute compilation', kind: 'auto', schedule: 'Sundays 5:00 PM' }
 };
 // kind/schedule are optional. If left out, the city looks them up in n8n (one extra request per bot, cached 1 hour).
@@ -323,12 +323,46 @@ async function buildCityData() {
 
     const runsToday = executions.filter(e => isToday(e.startedAt) && nameById[String(e.workflowId)]).length;
 
+    try {
+      const clips = await studioClips();
+      const ed = bots.find(x => x.name === 'Clip Editor');
+      if (ed) { ed.waiting = clips.filter(c => c.status === 'ready').length; ed.approved = clips.filter(c => c.status === 'approved').length; }
+    } catch {}
+
     return {
       businesses: BUSINESSES.map(b => ({ ...b, bots: bots.filter(x => x.biz === b.id) })),
       feed,
       runsToday,
       updatedAt: new Date().toISOString()
     };
+}
+
+// ---------- YouTube Studio clip approvals ----------
+// Shorts the Clip Editor made sit in the "Studio Clips" n8n data table.
+// ready = waiting for your approval, approved = you'll post it, posted / skipped = done.
+const STUDIO_TABLE = process.env.STUDIO_TABLE || 'bKAZJ4UiZ82TMgJy';
+const STUDIO_PROJECT = process.env.STUDIO_PROJECT || 'syHKEH4AK0RAR8Hz';
+let studioCache = null;
+async function studioClips(force) {
+  if (!force && studioCache && Date.now() - studioCache.at < 20 * 1000) return studioCache.data;
+  requireConnection();
+  const r = await mcpTool('get_data_table_rows', {
+    dataTableId: STUDIO_TABLE, projectId: STUDIO_PROJECT, limit: 60, sortBy: 'rendered_at:desc',
+    filter: { type: 'or', filters: [{ columnName: 'status', condition: 'eq', value: 'ready' }, { columnName: 'status', condition: 'eq', value: 'approved' }] }
+  });
+  const rows = (r.rows || r.data || []).filter(x => x.clip_id && x.video_url);
+  const data = rows.map(x => ({
+    id: x.clip_id, status: x.status, streamer: x.streamer || '', platform: x.platform || '', hook: x.hook || '',
+    title: x.yt_title || '', description: x.description || '', video: x.video_url, duration: x.duration || null,
+    made: fmtTime(x.rendered_at), source: x.url || ''
+  }));
+  studioCache = { at: Date.now(), data };
+  return data;
+}
+async function studioDecide(id, action) {
+  const res = await fetch(N8N_BASE_URL + '/webhook/studio-inbox?id=' + encodeURIComponent(id) + '&a=' + encodeURIComponent(action));
+  if (!res.ok) throw new Error('n8n did not save that choice (' + res.status + ')');
+  studioCache = null;
 }
 
 // ---------- Web server ----------
@@ -367,6 +401,14 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && url.pathname === '/api/city') {
       return sendJson(res, 200, await cityData());
+    }
+    if (req.method === 'GET' && url.pathname === '/api/studio/clips') {
+      return sendJson(res, 200, { clips: await studioClips(url.searchParams.has('fresh')) });
+    }
+    const sc = url.pathname.match(/^\/api\/studio\/clips\/([A-Za-z0-9_-]+)\/(approve|decline|posted)$/);
+    if (req.method === 'POST' && sc) {
+      await studioDecide(sc[1], sc[2]);
+      return sendJson(res, 200, { ok: true, clips: await studioClips(true) });
     }
     const m = url.pathname.match(/^\/api\/bots\/([^/]+)\/(activate|deactivate)$/);
     if (req.method === 'POST' && m) {

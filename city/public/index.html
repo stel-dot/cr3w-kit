@@ -103,6 +103,29 @@ body.office .feed{display:none}
 .stat b{font-weight:500;font-size:14px}
 .stat.wide{grid-column:1/-1}
 .p-actions{display:flex;gap:8px;flex-wrap:wrap}
+.review-chip{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-family:var(--f-mono);font-size:11px;font-weight:600;letter-spacing:.04em;color:#1a1404;background:var(--gold);border-radius:999px;padding:3px 9px}
+.studio{display:flex;flex-direction:column;gap:10px}
+.s-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.s-head h3{margin:0;font-family:var(--f-display);font-size:16px;letter-spacing:.04em}
+.s-tabs{display:flex;gap:4px;background:rgba(6,8,26,.55);border:1px solid var(--line);border-radius:10px;padding:3px}
+.s-tabs button{flex:1;font:500 13px var(--f-body);color:var(--dim);background:none;border:0;border-radius:7px;padding:7px 8px;cursor:pointer}
+.s-tabs button b{font-family:var(--f-mono);font-weight:600;color:var(--ink);margin-left:4px}
+.s-tabs button.on{background:var(--deck);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-2)}
+.clip{display:grid;grid-template-columns:132px 1fr;gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px;background:rgba(6,8,26,.55)}
+.clip video{width:132px;aspect-ratio:9/16;border-radius:8px;background:#000;object-fit:cover;display:block}
+.c-main{display:flex;flex-direction:column;gap:8px;min-width:0}
+.c-meta{font-family:var(--f-mono);font-size:11px;color:var(--dim);line-height:1.4}
+.c-meta b{color:var(--gold);font-weight:600}
+.c-title{font-size:14px;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.c-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto}
+.c-acts .btn{padding:7px 10px}
+.btn.ok{background:#16a34a;border-color:#16a34a;color:#fff;font-weight:600}
+.c-desc{font-size:12px}
+.c-desc summary{cursor:pointer;color:var(--dim);font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.c-desc pre{white-space:pre-wrap;font:12px/1.45 var(--f-body);background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0 0;max-height:150px;overflow:auto}
+.c-copy{font-size:12px;padding:5px 9px}
+.s-empty{color:var(--dim);font-size:13.5px;line-height:1.5;padding:14px;border:1px dashed var(--line-2);border-radius:12px;text-align:center}
+.s-note{color:var(--dim);font-size:12px;line-height:1.45}
 
 .login{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 30%,rgba(90,70,220,.35),rgba(6,8,26,.96) 60%);padding:16px}
 .login form{width:min(360px,100%);background:var(--glass-2);backdrop-filter:blur(14px);border:1px solid var(--line-2);border-radius:16px;padding:28px 24px 24px;display:flex;flex-direction:column;gap:12px;text-align:center}
@@ -116,6 +139,8 @@ body.office .feed{display:none}
 @media (max-width:720px){
   .panel{top:auto;left:0;right:0;bottom:0;width:auto;max-height:62%;border-radius:16px 16px 0 0;padding-bottom:env(safe-area-inset-bottom,0px)}
   body.office:not(.focus) .panel{max-height:42%}
+  body.reviewing .panel{max-height:86%}
+  .clip{grid-template-columns:116px 1fr}.clip video{width:116px}
   .counts,.where{display:none}
   body.open .feed,body.open .hint{display:none}
   .brand{font-size:16px}.brand img{width:24px;height:28px}
@@ -770,9 +795,12 @@ function buildOffice(b){
     station.traverse(o=>{if(o.isMesh){o.userData.botId=bot.id;O.pick.push(o)}});
     applyRobotStatus(R);
   }
-  O.anims.push(t=>{skylight.material.opacity=.45+.15*Math.sin(t*.8)});
+  O.anims.push(t=>{skylight.material.opacity=.45+.15*Math.sin(t*.8);for(const R of Object.values(O.robots))if(R.badge)R.badge.position.y=3.08+Math.sin(t*3+R.phase)*.05});
 }
-function applyRobotStatus(R){const st=STATUS[R.bot.status];R.pad.material.color.setHex(st.hex);R.alarm.visible=R.bot.status==='error'}
+function badgeTex(n){return ctex(384,96,(g,w,h)=>{g.fillStyle='#ffd21f';rr(g,4,4,w-8,h-8,44);g.fill();g.fillStyle='#1a1404';g.font='700 44px "Chakra Petch",sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(n+' to review',w/2,h/2+2)})}
+function applyRobotStatus(R){const st=STATUS[R.bot.status];R.pad.material.color.setHex(st.hex);R.alarm.visible=R.bot.status==='error';
+  const n=R.bot.waiting||0;if(n!==R.badgeN){if(R.badge){R.station.remove(R.badge);R.badge.material.map.dispose();R.badge.material.dispose();R.badge=null}
+    if(n>0){R.badge=sprite(badgeTex(n),1.5,.375);R.badge.position.y=3.08;R.station.add(R.badge)}R.badgeN=n}}
 function refreshOffice(){
   if(mode!=='office')return;const b=BIZ.find(x=>x.id===currentBiz);if(!b)return;
   const ids=b.bots.map(x=>x.id).sort().join(),have=Object.keys(O.robots).sort().join();
@@ -885,6 +913,8 @@ function botActions(bot){let toggle='';
 function renderPanel(){
   const b=BIZ.find(x=>x.id===currentBiz);if(!b)return;
   const bot=focusBot&&b.bots.find(x=>x.id===focusBot);
+  const keep=document.getElementById('studio');
+  if(bot&&keep&&keep.dataset.bot===bot.id&&[...keep.querySelectorAll('video')].some(v=>!v.paused))return; // don't interrupt a Short you're watching
   if(bot){const st=STATUS[bot.status];
     pEye.textContent=b.name+' · Desk';pTitle.textContent=bot.name;pSub.textContent=bot.job;
     pContent.innerHTML=`<div class="profile">
@@ -892,17 +922,57 @@ function renderPanel(){
       <div class="stats"><div class="stat wide"><span>Schedule</span><b>${esc(bot.schedule)}</b></div>
         <div class="stat"><span>Today</span><b>${esc(bot.today)}</b></div><div class="stat"><span>Last run</span><b>${esc(bot.last)}</b></div></div>
       ${bot.err?`<div class="err">${esc(bot.err)}</div>`:''}
-      <div class="p-actions">${botActions(bot)}<button class="btn" data-back="1">Back to office</button></div></div>`;return}
+      ${bot.name==='Clip Editor'?`<div class="studio" id="studio" data-bot="${esc(bot.id)}"><div class="s-empty">Loading Shorts…</div></div>`:''}
+      <div class="p-actions">${botActions(bot)}<button class="btn" data-back="1">Back to office</button></div></div>`;
+    document.body.classList.toggle('reviewing',bot.name==='Clip Editor');
+    const fresh=document.getElementById('studio');
+    if(fresh){if(keep&&keep.dataset.bot===fresh.dataset.bot)fresh.replaceWith(keep);else loadStudio()}
+    return}
+  document.body.classList.remove('reviewing');
   pEye.textContent='Office floor';pTitle.textContent=b.name;pSub.textContent=b.sub;
   if(!b.bots.length){pContent.innerHTML=`<div class="empty"><b>No bots here yet.</b><br>The desks are set up and waiting. When you build a bot for this building in n8n and give it a name in <b>BOT_INFO</b>, it takes a seat here.</div>`;return}
   pContent.innerHTML=`<div class="floor-label">${b.bots.length} desks · tap a bot to meet it</div><div class="desks">${b.bots.map(bot=>{const st=STATUS[bot.status];
     return `<div class="desk ${bot.status}" data-bot="${esc(bot.id)}" tabindex="0" role="button" aria-label="Meet ${esc(bot.name)}">
-      <div class="desk-top"><div class="bot-face">${face(st.css)}</div><div><h3>${esc(bot.name)}</h3><p class="job">${esc(bot.job)}</p></div><div class="status"><span class="dot ${bot.status}"></span>${st.label}</div></div>
+      <div class="desk-top"><div class="bot-face">${face(st.css)}</div><div><h3>${esc(bot.name)}</h3><p class="job">${esc(bot.job)}</p>${bot.waiting?`<span class="review-chip">${bot.waiting} Short${bot.waiting===1?'':'s'} to review</span>`:''}</div><div class="status"><span class="dot ${bot.status}"></span>${st.label}</div></div>
       <div class="desk-body"><div><span>Schedule </span>${esc(bot.schedule)}</div><div><span>Today </span>${esc(bot.today)}</div><div><span>Last run </span>${esc(bot.last)}</div>${bot.err?`<div class="err">${esc(bot.err)}</div>`:''}</div>
       <div class="actions">${botActions(bot)}</div></div>`}).join('')}</div>`;
 }
+// ---------- YouTube Studio: review Shorts with the Clip Editor ----------
+let CLIPS=[],studioTab='ready';
+const fmtDur=s=>s?Math.round(s)+'s':'';
+async function loadStudio(fresh){const el=document.getElementById('studio');if(!el)return;
+  try{const r=await api('/api/studio/clips'+(fresh?'?fresh=1':''));const j=await r.json();if(!r.ok)throw new Error(j.error||'Failed');CLIPS=j.clips||[];renderStudio()}
+  catch(err){el.innerHTML=`<div class="s-empty">Could not load the Shorts: ${esc(err.message)}</div>`}}
+function clipCard(c){const ready=c.status==='ready';
+  return `<div class="clip" data-clip="${esc(c.id)}">
+    <video src="${esc(c.video)}#t=0.1" controls playsinline preload="metadata"></video>
+    <div class="c-main"><div class="c-meta"><b>${esc(c.streamer)}</b> · ${fmtDur(c.duration)}<br>Made ${esc(c.made)}</div>
+      <div class="c-title">${esc(c.title||c.hook)}</div>
+      ${ready?`<div class="c-acts"><button class="btn ok" data-dec="approve">✓ Approve</button><button class="btn" data-dec="decline">✕ Decline</button></div>`
+      :`<div class="c-acts"><button class="btn c-copy" data-copy="title">Copy title</button><button class="btn c-copy" data-copy="description">Copy description</button></div>
+        <details class="c-desc"><summary>Description</summary><pre>${esc(c.description)}</pre></details>
+        <div class="c-acts"><a class="btn" href="${esc(c.video)}?dl=1">⬇ Download</a><button class="btn ok" data-dec="posted">I posted it</button><button class="btn" data-dec="decline">✕</button></div>`}
+    </div></div>`}
+function renderStudio(){const el=document.getElementById('studio');if(!el)return;
+  const ready=CLIPS.filter(c=>c.status==='ready'),appr=CLIPS.filter(c=>c.status==='approved');
+  const list=studioTab==='ready'?ready:appr;
+  el.innerHTML=`<div class="s-head"><h3>Shorts</h3><button class="btn c-copy" data-refresh="1">Refresh</button></div>
+    <div class="s-tabs" role="tablist"><button data-st="ready" class="${studioTab==='ready'?'on':''}">To review<b>${ready.length}</b></button><button data-st="approved" class="${studioTab==='approved'?'on':''}">Approved<b>${appr.length}</b></button></div>
+    ${list.length?list.map(clipCard).join(''):`<div class="s-empty">${studioTab==='ready'?'Nothing waiting. New Shorts show up here and in your email.':'No approved Shorts yet. Approve one and it moves here, ready to post.'}</div>`}
+    <p class="s-note">${studioTab==='ready'?'You can also approve from the email. Both stay in sync.':'Download it, post it from your phone with the title and description, then tap “I posted it”.'}</p>`}
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();let ok=false;try{ok=document.execCommand('copy')}catch{}a.remove();return ok}}
 pContent.addEventListener('click',async e=>{
   if(e.target.closest('[data-back]')){back();return}
+  const tab=e.target.closest('[data-st]');if(tab){studioTab=tab.dataset.st;renderStudio();return}
+  if(e.target.closest('[data-refresh]')){loadStudio(true);return}
+  const cp=e.target.closest('[data-copy]');
+  if(cp){const c=CLIPS.find(x=>x.id===cp.closest('[data-clip]').dataset.clip);const ok=c&&await copyText(c[cp.dataset.copy]||'');const was=cp.textContent;cp.textContent=ok?'Copied ✓':'Copy failed';setTimeout(()=>cp.textContent=was,1500);return}
+  const dec=e.target.closest('[data-dec]');
+  if(dec){const card=dec.closest('[data-clip]'),id=card.dataset.clip;card.querySelectorAll('button').forEach(x=>x.disabled=true);dec.textContent='Saving…';
+    try{const r=await api('/api/studio/clips/'+encodeURIComponent(id)+'/'+dec.dataset.dec,{method:'POST'});const j=await r.json();if(!r.ok)throw new Error(j.error||'Failed');
+      CLIPS=j.clips||CLIPS.filter(x=>x.id!==id);if(dec.dataset.dec==='approve'&&!CLIPS.some(x=>x.status==='ready'))studioTab='approved';renderStudio();load()}
+    catch(err){showBanner('Could not save that: '+err.message);card.querySelectorAll('button').forEach(x=>x.disabled=false)}
+    return}
   const btn=e.target.closest('button[data-a]');
   if(!btn){if(e.target.closest('a'))return;const d=e.target.closest('[data-bot]');if(d)focusOn(d.dataset.bot);return}
   btn.disabled=true;btn.textContent='Working…';
