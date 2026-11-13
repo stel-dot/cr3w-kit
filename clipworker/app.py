@@ -236,6 +236,66 @@ def make_ass(words, path, caption_y, replays=(), replay_y=660):
         f.write(head + '\n'.join(lines) + '\n')
 
 
+# ---------- Clean-up: swap curse words in captions, cover them in the audio with meme sounds ----------
+SFX_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sfx')
+SFX = ['boom', 'quack', 'bleep', 'boing', 'airhorn', 'whistle']
+SWAPS = [  # (pattern on the bare lowercase word, replacement)
+    (r'(mother)?f[u*]+c?k+', lambda m: (m.group(1) and 'mother' or '') + 'duck'),
+    (r'f\*+', lambda m: 'duck'),
+    (r'sh[i*]+t+', lambda m: 'shoot'),
+    (r'bullsh[i*]+t+', lambda m: 'bullshoot'),
+    (r'b[i*]+tch', lambda m: 'witch'),
+    (r'n[i*]+gg(a|er|uh)', lambda m: 'ninja'),
+    (r'a+ss+hole', lambda m: 'butthole'),
+    (r'(dumb|jack|bad|smart|kick)?a+ss+', lambda m: (m.group(1) or '') + 'butt'),
+    (r'd[i*]+ck(head)?', lambda m: 'pickle' + (m.group(1) or '')),
+    (r'puss(y|ies)', lambda m: 'kitty'),
+    (r'damn+(it)?', lambda m: 'dang' + (m.group(1) or '')),
+    (r'goddamn+(it)?', lambda m: 'goshdang' + (m.group(1) or '')),
+    (r'bastard', lambda m: 'custard'),
+    (r'cunt', lambda m: 'punt'),
+    (r'hoe?s?', lambda m: 'hoe'),  # placeholder, removed below (farm tool, too ambiguous)
+]
+SWAPS = [(re.compile(r'^' + pat + r'(in|ing|ed|er|ers|s|es|y)?$'), fn) for pat, fn in SWAPS if not pat.startswith('hoe')]
+
+
+def clean_word(w):
+    """Returns (new_word, was_curse)."""
+    m0 = re.match(r'^([^\w*]*)([\w*\']+?)([^\w*]*)$', w)
+    if not m0:
+        return w, False
+    pre, core, post = m0.groups()
+    low = core.lower().replace("'", '')
+    for rx, fn in SWAPS:
+        m = rx.match(low)
+        if m:
+            new = fn(m) + (m.group(m.lastindex) if m.lastindex and m.group(m.lastindex) and rx.groups and m.lastindex == rx.groups else '')
+            if core.isupper() and len(core) > 1:
+                new = new.upper()
+            elif core[:1].isupper():
+                new = new[:1].upper() + new[1:]
+            return pre + new + post, True
+    return w, False
+
+
+def censor(words, seed):
+    spans = []
+    for w in words:
+        new, bad = clean_word(w['t'])
+        if bad:
+            w['t'] = new
+            spans.append((max(0, w['s'] - .06), w['e'] + .06))
+    merged = []
+    for a, b in spans:
+        if merged and a - merged[-1][1] < .25:
+            merged[-1] = (merged[-1][0], max(b, merged[-1][1]))
+        else:
+            merged.append((a, b))
+    import random
+    rnd = random.Random(seed)
+    return [(a, b, rnd.choice(SFX)) for a, b in merged]
+
+
 def wrap(draw, text, font, maxw):
     words, lines, cur = text.split(), [], ''
     for w in words:
@@ -336,6 +396,7 @@ def render_short(job):
         except Exception as e:
             words = []
             job['caption_error'] = str(e)[:200]
+    bleeps = censor(words, jid) if not job.get('keep_language') else []
     title_y, title_h = 190, 380
     landscape = info['w'] / info['h'] >= 1.2
     if landscape:
@@ -353,15 +414,28 @@ def render_short(job):
           f'[b]{fg}[fg];[bg][fg]overlay=(W-w)/2:{fg_y}+({fg_h}-h)/2[v1];'
           f'[v1][1:v]overlay=0:{title_y}[v2];'
           f"[v2]subtitles=filename={work}/cap.ass:fontsdir={FONTS}[v]")
-    cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-i', f'{work}/title.png', '-filter_complex', fc, '-map', '[v]']
+    cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-i', f'{work}/title.png']
+    amap = '0:a:0'
+    if info['audio'] and bleeps:
+        mute = '+'.join(f'between(t,{a:.2f},{b:.2f})' for a, b, _ in bleeps)
+        fc += f";[0:a:0]aformat=sample_rates=44100:channel_layouts=stereo,volume=0:enable='{mute}'[a0]"
+        mix = '[a0]'
+        for i, (a, b, name) in enumerate(bleeps):
+            cmd += ['-i', f'{SFX_DIR}/{name}.wav']
+            ms = int(a * 1000)
+            fc += f';[{i + 2}:a]aformat=sample_rates=44100:channel_layouts=stereo,volume=0.85,adelay={ms}|{ms}[s{i}]'
+            mix += f'[s{i}]'
+        fc += f';{mix}amix=inputs={len(bleeps) + 1}:duration=first:normalize=0[a]'
+        amap = '[a]'
+    cmd += ['-filter_complex', fc, '-map', '[v]']
     if info['audio']:
-        cmd += ['-map', '0:a:0', '-c:a', 'aac', '-b:a', '128k']
+        cmd += ['-map', amap, '-c:a', 'aac', '-b:a', '128k']
     cmd += ['-t', f'{dur:.2f}', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-maxrate', '4500k', '-bufsize', '9M',
             '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out]
     run(cmd, 1800)
     shutil.rmtree(work, ignore_errors=True)
     return {'ok': True, 'id': jid, 'file': os.path.basename(out), 'url': f'{PUBLIC}/clips/{os.path.basename(out)}',
-            'duration': round(dur, 1), 'captions': len(words), 'size_mb': round(os.path.getsize(out) / 1e6, 1), 'replays': len(replays),
+            'duration': round(dur, 1), 'captions': len(words), 'size_mb': round(os.path.getsize(out) / 1e6, 1), 'replays': len(replays), 'cleaned': len(bleeps),
             'caption_error': job.get('caption_error')}
 
 
