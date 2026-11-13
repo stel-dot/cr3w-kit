@@ -71,6 +71,7 @@ def scout_kick(handle, n):
     for i, c in enumerate(data.get('clips') or []):
         out.append({'id': 'kk_' + safe_id(c.get('id')), 'platform': 'kick',
                     'url': c.get('video_url') or c.get('clip_url') or f'https://kick.com/{handle}/clips/{c.get("id")}',
+                    'page': f'https://kick.com/{handle}/clips/{c.get("id")}',
                     'title': c.get('title') or '', 'views': c.get('view_count') or c.get('views') or 0, 'rank': i,
                     'duration': c.get('duration') or 0, 'created': c.get('created_at') or 0, 'start': None, 'end': None})
     return out[:n * 2]
