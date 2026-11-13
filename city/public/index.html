@@ -991,6 +991,7 @@ function api(url,opts={}){return fetch(url,{...opts,headers:{...(opts.headers||{
 document.getElementById('login-form').addEventListener('submit',async e=>{
   e.preventDefault();PASS=document.getElementById('pass').value;
   const r=await api('/api/city');
+  if(r.status===429){const j=await r.json().catch(()=>({}));document.getElementById('login-err').textContent=`Too many wrong tries. This device is locked for ${j.minutes||15} min.`;return}
   if(r.status===401){document.getElementById('login-err').textContent='That password is not right. Try again.';return}
   try{localStorage.setItem('cr3w-pass',PASS)}catch{}
   loginBox.hidden=true;load();
@@ -1004,7 +1005,7 @@ const fontsReady=Promise.race([document.fonts?document.fonts.ready:Promise.resol
 async function load(){
   try{
     const r=await api('/api/city');
-    if(r.status===401){loginBox.hidden=false;live.textContent='Locked';live.className='tag';return}
+    if(r.status===401||r.status===429){loginBox.hidden=false;live.textContent='Locked';live.className='tag';if(r.status===429)document.getElementById('login-err').textContent='Too many wrong tries. Try again in a few minutes.';return}
     const j=await r.json();if(!r.ok)throw new Error(j.error||'Could not reach n8n');
     await fontsReady;
     BIZ=j.businesses;RUNS=j.runsToday||0;banner.hidden=true;live.textContent=j.stale?'Delayed':'Live';live.className=j.stale?'tag':'tag live';

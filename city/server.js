@@ -78,7 +78,8 @@ const BOT_INFO = {
   'Clip Scout': { biz: 'youtube', job: 'Finds the best stream moments from your 7 streamers', kind: 'auto', schedule: 'Every 6 hours' },
   'Clip Editor': { biz: 'youtube', job: 'Turns top moments into Shorts and sends them to you', kind: 'auto', schedule: 'Every 2 hours, 8 AM to 10 PM' },
   'Studio Inbox': { biz: 'youtube', job: 'Handles your Approve / Decline / Posted choices', kind: 'auto', schedule: 'Always on (email buttons)' },
-  'Compilation Builder': { biz: 'youtube', job: 'Builds the weekly 4 to 10 minute compilation', kind: 'auto', schedule: 'Sundays 5:00 PM' }
+  'Compilation Builder': { biz: 'youtube', job: 'Builds the weekly 4 to 10 minute compilation', kind: 'auto', schedule: 'Sundays 5:00 PM' },
+  'Gatekeeper': { biz: 'cr3w', job: 'Emails you when someone gets locked out for guessing your City password', kind: 'auto', schedule: 'Checks every 5 min' }
 };
 // kind/schedule are optional. If left out, the city looks them up in n8n (one extra request per bot, cached 1 hour).
 
@@ -93,6 +94,41 @@ function authorized(req) {
     if (decoded.slice(decoded.indexOf(':') + 1) === PASSWORD) return true;
   }
   return false;
+}
+
+// ---------- Lockout on bad passwords ----------
+// 5 wrong City passwords from the same device (IP) locks it out for 15 minutes.
+// Each lockout is written to the "Security Log" n8n data table; the Gatekeeper bot emails it to you.
+const LOCK_AFTER = 5, LOCK_MINUTES = 15;
+const SECURITY_TABLE = process.env.SECURITY_TABLE || 'B5fUQ7XvgMSU0hP5';
+const fails = new Map(); // ip -> { count, first, until }
+function clientIp(req) {
+  return String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+}
+function lockedFor(ip) {
+  const f = fails.get(ip);
+  if (!f || !f.until) return 0;
+  const left = f.until - Date.now();
+  if (left <= 0) { fails.delete(ip); return 0; }
+  return left;
+}
+function noteFailure(ip, req) {
+  const now = Date.now();
+  let f = fails.get(ip);
+  if (!f || now - f.first > LOCK_MINUTES * 60000) f = { count: 0, first: now, until: 0 };
+  f.count++;
+  if (f.count >= LOCK_AFTER) {
+    f.until = now + LOCK_MINUTES * 60000;
+    logSecurity('lockout', ip, `${f.count} wrong City passwords; locked for ${LOCK_MINUTES} min. Device: ${String(req.headers['user-agent'] || 'unknown').slice(0, 160)}`);
+  }
+  fails.set(ip, f);
+  if (fails.size > 5000) fails.clear(); // memory guard
+}
+function logSecurity(event, ip, detail) {
+  if (!N8N_MCP_TOKEN) return;
+  mcpTool('add_data_table_rows', { dataTableId: SECURITY_TABLE, projectId: STUDIO_PROJECT,
+    rows: [{ happened_at: new Date().toISOString(), event, ip, detail, emailed: false }] })
+    .catch(e => console.error('security log failed:', e.message));
 }
 
 // ---------- n8n connection ----------
@@ -377,9 +413,11 @@ const server = http.createServer(async (req, res) => {
     if (!CONFIG_FILE || !SETUP_CODE) { res.writeHead(302, { Location: '/' }); return res.end(); }  // always reachable on the server so the token can be updated; still needs the setup code
     if (req.method === 'GET') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return res.end(SETUP_HTML); }
     if (req.method === 'POST') {
+      const left = lockedFor(clientIp(req));
+      if (left) return sendJson(res, 429, { error: `Too many wrong tries. Try again in ${Math.ceil(left / 60000)} min.` });
       let d = {};
       try { d = JSON.parse(await readBody(req)); } catch {}
-      if (String(d.code || '').trim().toUpperCase() !== SETUP_CODE.toUpperCase()) return sendJson(res, 403, { error: 'Setup code is wrong' });
+      if (String(d.code || '').trim().toUpperCase() !== SETUP_CODE.toUpperCase()) { noteFailure(clientIp(req), req); return sendJson(res, 403, { error: 'Setup code is wrong' }); }
       const token = String(d.token || '').trim();
       const password = String(d.password || '');
       if (!token || password.length < 6) return sendJson(res, 400, { error: 'Fill in the token and a password of 6+ characters' });
@@ -392,8 +430,14 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/') { res.writeHead(302, { Location: '/setup' }); return res.end(); }
     return sendJson(res, 503, { error: 'CR3W City is not set up yet. Open /setup.' });
   }
-  if (url.pathname.startsWith('/api/') && !authorized(req)) {
-    return sendJson(res, 401, { error: 'Wrong or missing password' });
+  if (url.pathname.startsWith('/api/')) {
+    const ip = clientIp(req), left = lockedFor(ip);
+    if (left) return sendJson(res, 429, { error: 'Too many wrong passwords', minutes: Math.ceil(left / 60000) });
+    if (!authorized(req)) {
+      if (req.headers['x-cr3w-pass'] || req.headers.authorization) noteFailure(ip, req); // an empty first visit doesn't count
+      return sendJson(res, 401, { error: 'Wrong or missing password' });
+    }
+    fails.delete(ip);
   }
   try {
     if (req.method === 'GET' && url.pathname === '/api/layout') {
