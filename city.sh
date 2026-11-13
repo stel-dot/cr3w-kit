@@ -8,12 +8,14 @@ rm -rf /tmp/cr3w-kit
 git clone -q --depth 1 https://github.com/stel-dot/cr3w-kit /tmp/cr3w-kit
 mkdir -p city city-data
 rm -rf city/* && cp -r /tmp/cr3w-kit/city/. city/
+rm -rf clipworker && cp -r /tmp/cr3w-kit/clipworker clipworker
+mkdir -p clipdata
 cp /tmp/cr3w-kit/server/docker-compose.yml /tmp/cr3w-kit/server/Caddyfile /tmp/cr3w-kit/server/update.sh .
 grep -q '^CITY_HOST=' .env || echo "CITY_HOST=city.cr3winc.com" >> .env
 grep -q '^SETUP_CODE=' .env || echo "SETUP_CODE=$(openssl rand -hex 3 | tr a-f A-F)" >> .env
 echo "== Starting =="
-docker compose up -d
-docker compose restart city caddy >/dev/null
+docker compose up -d --build
+docker compose restart city caddy clipworker >/dev/null
 CODE=$(grep '^SETUP_CODE=' .env | cut -d= -f2)
 echo ""
 echo "CR3W City is installed."

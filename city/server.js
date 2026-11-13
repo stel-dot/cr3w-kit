@@ -74,7 +74,11 @@ const BOT_INFO = {
   'Reply Sorter': { biz: 'cr3w', job: 'Sorts replies and alerts you about hot leads', kind: 'auto', schedule: 'Checks inbox every 15 min' },
   'Call List Manager': { biz: 'cr3w', job: 'Emails your daily call list with scripts', kind: 'auto', schedule: 'Weekdays 8:00 AM' },
   'Review Requester': { biz: 'cr3w', job: 'Sends the thank-you survey after delivery', kind: 'auto', schedule: 'Daily 10:00 AM' },
-  'Review Survey': { biz: 'cr3w', job: 'The survey page customers fill out', kind: 'auto', schedule: 'Always on (survey page)' }
+  'Review Survey': { biz: 'cr3w', job: 'The survey page customers fill out', kind: 'auto', schedule: 'Always on (survey page)' },
+  'Clip Scout': { biz: 'youtube', job: 'Finds the best stream moments from your 7 streamers', kind: 'auto', schedule: 'Every 6 hours' },
+  'Clip Editor': { biz: 'youtube', job: 'Turns top moments into Shorts and sends them to you', kind: 'auto', schedule: 'Every 2 hours, 8 AM to 10 PM' },
+  'Studio Inbox': { biz: 'youtube', job: 'Handles your Posted / Skip taps on each Short', kind: 'auto', schedule: 'Always on (email buttons)' },
+  'Compilation Builder': { biz: 'youtube', job: 'Builds the weekly 4 to 10 minute compilation', kind: 'auto', schedule: 'Sundays 5:00 PM' }
 };
 // kind/schedule are optional. If left out, the city looks them up in n8n (one extra request per bot, cached 1 hour).
 

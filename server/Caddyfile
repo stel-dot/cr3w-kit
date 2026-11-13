@@ -3,5 +3,10 @@
 }
 
 {$CITY_HOST} {
-	reverse_proxy city:3000
+	handle /clips/* {
+		reverse_proxy clipworker:8000
+	}
+	handle {
+		reverse_proxy city:3000
+	}
 }

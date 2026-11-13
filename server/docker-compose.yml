@@ -73,6 +73,16 @@ services:
       - ./city:/app:ro
       - ./city-data:/data
 
+  # CR3W Clip Worker: turns streamer moments into Shorts (used by the YouTube Studio bots)
+  clipworker:
+    build: ./clipworker
+    restart: unless-stopped
+    cpus: 1.5
+    environment:
+      PUBLIC_BASE: https://${CITY_HOST:-city.cr3winc.com}
+    volumes:
+      - ./clipdata:/data
+
 volumes:
   db_data:
   n8n_data:
