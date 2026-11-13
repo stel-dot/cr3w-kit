@@ -91,11 +91,12 @@ def heat_peaks(heat, dur, count, win=40):
 
 
 def scout_youtube(handle, n):
-    out, seen = [], set()
+    out, seen, errs = [], set(), []
     for tab in ('streams', 'videos'):
         try:
             lst = ytdlp_json(['--flat-playlist', '--playlist-end', '3', f'https://www.youtube.com/@{handle}/{tab}'])
-        except Exception:
+        except Exception as ex:
+            errs.append(f'{tab} list: {ex}')
             continue
         for e in lst.get('entries') or []:
             vid = e.get('id')
@@ -104,7 +105,8 @@ def scout_youtube(handle, n):
             seen.add(vid)
             try:
                 full = ytdlp_json(['--skip-download', f'https://www.youtube.com/watch?v={vid}'])
-            except Exception:
+            except Exception as ex:
+                errs.append(f'{vid}: {ex}')
                 continue
             if full.get('is_live'):
                 continue
@@ -116,6 +118,8 @@ def scout_youtube(handle, n):
                 out.append({'id': f'yt_{safe_id(vid)}_{int(s)}', 'platform': 'youtube', 'url': f'https://www.youtube.com/watch?v={vid}',
                             'title': full.get('title') or '', 'views': full.get('view_count') or 0, 'rank': k,
                             'duration': round(e2 - s), 'created': ts, 'start': round(s, 1), 'end': round(e2, 1)})
+    if not out and errs:
+        raise RuntimeError(' | '.join(errs)[:400])
     return out[:n * 2]
 
 
@@ -173,11 +177,15 @@ _model = None
 
 def transcribe(src, wav):
     global _model
-    run(['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-vn', '-ac', '1', '-ar', '16000', wav], 300)
+    run(['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-vn', '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le', wav], 300)
     if _model is None:
         from faster_whisper import WhisperModel
         _model = WhisperModel(os.environ.get('WHISPER_MODEL', 'base'), device='cpu', compute_type='int8', cpu_threads=2)
-    segs, _ = _model.transcribe(wav, word_timestamps=True, vad_filter=True, beam_size=1)
+    # read the 16 kHz mono wav ourselves (avoids faster-whisper's PyAV decoder, which breaks with newer PyAV releases)
+    import wave, numpy as np
+    with wave.open(wav, 'rb') as f:
+        audio = np.frombuffer(f.readframes(f.getnframes()), dtype=np.int16).astype(np.float32) / 32768.0
+    segs, _ = _model.transcribe(audio, word_timestamps=True, vad_filter=True, beam_size=1)
     words = []
     for sg in segs:
         for w in sg.words or []:
