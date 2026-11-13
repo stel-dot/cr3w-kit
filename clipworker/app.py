@@ -201,13 +201,14 @@ def ass_time(t):
     return f'{int(t // 3600)}:{int(t % 3600 // 60):02d}:{t % 60:05.2f}'
 
 
-def make_ass(words, path, caption_y):
+def make_ass(words, path, caption_y, replays=(), replay_y=660):
     # 1-2 words at a time, big, colour rotating white / yellow / cyan, small pop-in like the reference Shorts
     cols = ['&H00FFFFFF', '&H004DE1FF', '&H00FFE03F']  # ASS colours are BGR
     head = ('[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nWrapStyle: 2\n\n'
             '[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, '
             'ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n'
-            f'Style: Cap,Montserrat Black,108,&H00FFFFFF,&H00FFFFFF,&H00000000,&H96000000,0,0,0,0,100,100,0,0,1,7,4,2,60,60,{H - caption_y},1\n\n'
+            f'Style: Cap,Montserrat Black,108,&H00FFFFFF,&H00FFFFFF,&H00000000,&H96000000,0,0,0,0,100,100,0,0,1,7,4,2,60,60,{H - caption_y},1\n'
+            'Style: Rep,Montserrat Black,62,&H001FD4FF,&H001FD4FF,&H00000000,&H96000000,0,0,0,0,100,100,2,0,1,6,3,8,60,60,0,1\n\n'
             '[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n')
     groups, chunk = [], []
     def flush():
@@ -229,6 +230,8 @@ def make_ass(words, path, caption_y):
         e = nxt if nxt is not None and nxt - g['e'] < .6 else g['e'] + .15
         col = cols[i % len(cols)]
         lines.append(f"Dialogue: 0,{ass_time(g['s'])},{ass_time(e)},Cap,,0,0,0,,{{\\c{col}\\fscx82\\fscy82\\t(0,90,\\fscx100\\fscy100)}}{g['txt']}")
+    for a, b in replays:
+        lines.append(f"Dialogue: 1,{ass_time(a)},{ass_time(b)},Rep,,0,0,0,,{{\\pos(540,{replay_y})\\fad(150,150)}}INSTANT REPLAY")
     with open(path, 'w', encoding='utf-8') as f:
         f.write(head + '\n'.join(lines) + '\n')
 
@@ -280,15 +283,52 @@ def hook_from(title, streamer):
     return t[:90]
 
 
+def extend_to(src, info, work, min_len):
+    """Clips shorter than min_len get an instant replay: the end of the clip again,
+    slowed to 0.75x and zoomed in a little, until the Short reaches min_len."""
+    d = info['dur']
+    if d >= min_len or d < 4:
+        return src, info, []
+    parts, total = [(0.0, d, 1.0, False)], d
+    while total < min_len:
+        rem = min_len + 0.3 - total
+        L = min(d, rem * 0.75)
+        parts.append((d - L, d, 0.75, True))
+        total += L / 0.75
+    w, h = info['w'] - info['w'] % 2, info['h'] - info['h'] % 2
+    zw, zh = int(w * 1.12) // 2 * 2, int(h * 1.12) // 2 * 2
+    fc, ins, replays, t = [], [], [], 0.0
+    for i, (a, b, sp, rep) in enumerate(parts):
+        v = f'[0:v]trim={a:.3f}:{b:.3f},setpts=(PTS-STARTPTS)/{sp},fps=30,scale={w}:{h}'
+        if rep:
+            v += f',scale={zw}:{zh},crop={w}:{h}'
+            replays.append((t, t + (b - a) / sp))
+        fc.append(v + f',setsar=1[v{i}]')
+        ins.append(f'[v{i}]')
+        if info['audio']:
+            fc.append(f'[0:a]atrim={a:.3f}:{b:.3f},asetpts=PTS-STARTPTS,atempo={sp},aresample=44100[a{i}]')
+            ins.append(f'[a{i}]')
+        t += (b - a) / sp
+    n = len(parts)
+    fc.append(''.join(ins) + f'concat=n={n}:v=1:a={1 if info["audio"] else 0}' + ('[v][a]' if info['audio'] else '[v]'))
+    out = f'{work}/extended.mp4'
+    cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-filter_complex', ';'.join(fc), '-map', '[v]']
+    if info['audio']:
+        cmd += ['-map', '[a]', '-c:a', 'aac']
+    run(cmd + ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', out], 900)
+    return out, probe(out), replays
+
+
 def render_short(job):
     jid = safe_id(job['id'])
     job['id'] = jid
     out = f'{CLIPS}/{jid}.mp4'
     src = download(job)
     info = probe(src)
-    dur = min(info['dur'], float(job.get('max_seconds') or 170))
     work = f'{WORK}/{jid}'
     os.makedirs(work, exist_ok=True)
+    src, info, replays = extend_to(src, info, work, float(job.get('min_seconds') or 30))
+    dur = min(info['dur'], float(job.get('max_seconds') or 170))
     words = []
     if info['audio'] and not job.get('no_captions'):
         try:
@@ -307,7 +347,7 @@ def render_short(job):
         fg = f'scale={W}:-2,crop={W}:min(ih\\,{fg_h})'
         cap_y = fg_y + fg_h - 230
     make_title(job.get('hook') or hook_from(job.get('title'), job.get('streamer')), f'{work}/title.png', title_h)
-    make_ass(words, f'{work}/cap.ass', cap_y)
+    make_ass(words, f'{work}/cap.ass', cap_y, replays, fg_y + 70)
     fc = (f'[0:v]fps=30,split[a][b];'
           f'[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},hflip,gblur=sigma=30,eq=brightness=-0.10:saturation=1.15[bg];'
           f'[b]{fg}[fg];[bg][fg]overlay=(W-w)/2:{fg_y}+({fg_h}-h)/2[v1];'
@@ -321,7 +361,7 @@ def render_short(job):
     run(cmd, 1800)
     shutil.rmtree(work, ignore_errors=True)
     return {'ok': True, 'id': jid, 'file': os.path.basename(out), 'url': f'{PUBLIC}/clips/{os.path.basename(out)}',
-            'duration': round(dur, 1), 'captions': len(words), 'size_mb': round(os.path.getsize(out) / 1e6, 1),
+            'duration': round(dur, 1), 'captions': len(words), 'size_mb': round(os.path.getsize(out) / 1e6, 1), 'replays': len(replays),
             'caption_error': job.get('caption_error')}
 
 
