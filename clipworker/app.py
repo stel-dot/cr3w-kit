@@ -293,7 +293,8 @@ def censor(words, seed):
         else:
             merged.append([a, b])
     # mostly silent cuts, about 1 in 4 gets the muffled thud
-    return [(a, b, 'thud' if rnd.random() < .25 else None) for a, b in merged]
+    # each curse is either muted or covered with a short bass hit
+    return [(a, b, 'thud' if rnd.random() < .5 else None) for a, b in merged]
 
 
 def hype_moments(wav, dur, seed, cuts=()):
@@ -449,13 +450,13 @@ def render_short(job):
           f"[v2]subtitles=filename={work}/cap.ass:fontsdir={FONTS}[v]")
     cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-i', f'{work}/title.png']
     amap = '0:a:0'
-    if info['audio'] and (cuts or hype):
+    if info['audio'] and cuts:
         base = '[0:a:0]aformat=sample_rates=44100:channel_layouts=stereo'
         if cuts:
             base += ",volume=0:enable='" + '+'.join(f'between(t,{a:.2f},{b:.2f})' for a, b, _ in cuts) + "'"
         fc += f';{base}[a0]'
         mix, n = '[a0]', 0
-        for at, name, vol in [(a, k, .9) for a, b, k in cuts if k] + [(t, k, .75) for t, k, _ in hype]:
+        for at, name, vol in [(a, k, .9) for a, b, k in cuts if k]:  # reaction moments get a caption only, no sound
             cmd += ['-i', f'{SFX_DIR}/{name}.wav']
             ms = int(at * 1000)
             fc += f';[{n + 2}:a]aformat=sample_rates=44100:channel_layouts=stereo,volume={vol},adelay={ms}|{ms}[s{n}]'
