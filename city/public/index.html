@@ -705,6 +705,57 @@ function makeRobot(bot,accent){
   if(role==='writer'){const pen=mesh(new THREE.CylinderGeometry(.012,.012,.2,6),acc,false);pen.rotation.x=1.2;pen.position.set(0,-.33,.05);arms.R.el.add(pen)}
   return {group:R,torso,headPivot,head,arms,eyes,eye,acc,gear,role}
 }
+// ---------- Security bots: robot agents in black suits and shades ----------
+const isSecurity=bot=>!!bot.security||/^(gatekeeper|watchtower|sentinel|patch crew|vault keeper)$/i.test(bot.name);
+function makeAgent(bot,accent){
+  const R=new THREE.Group();
+  const suit=new THREE.MeshStandardMaterial({color:0x0b0c12,metalness:.15,roughness:.55,envMap:ENV,envMapIntensity:.5});
+  const lapel=new THREE.MeshStandardMaterial({color:0x14151d,metalness:.3,roughness:.35,envMap:ENV});
+  const shirt=new THREE.MeshStandardMaterial({color:0xf3f4f8,roughness:.6});
+  const shell=new THREE.MeshStandardMaterial({color:0x8a93a8,metalness:.75,roughness:.22,envMap:ENV,envMapIntensity:1.2});
+  const shoe=new THREE.MeshStandardMaterial({color:0x050507,metalness:.4,roughness:.2,envMap:ENV,envMapIntensity:1.4});
+  const acc=new THREE.MeshStandardMaterial({color:accent,emissive:accent,emissiveIntensity:.55,metalness:.3,roughness:.35,envMap:ENV});
+  const eye=new THREE.MeshBasicMaterial({color:STATUS[bot.status].hex,toneMapped:false});
+  const shades=new THREE.MeshStandardMaterial({color:0x020204,metalness:1,roughness:.04,envMap:ENV,envMapIntensity:2.2});
+  // legs: straight trousers + polished shoes, feet shoulder-width apart
+  [-1,1].forEach(s=>{const leg=mesh(new THREE.CylinderGeometry(.085,.075,.86,14),suit);leg.position.set(s*.15,.47,0);R.add(leg);
+    const sh=mesh(rbox(.16,.08,.3,.05),shoe);sh.position.set(s*.16,.04,.05);R.add(sh)});
+  const pelvis=mesh(new THREE.SphereGeometry(.2,20,12),suit);pelvis.scale.set(1.3,.6,.9);pelvis.position.y=.92;R.add(pelvis);
+  // torso: suit jacket over white shirt and black tie
+  const torso=new THREE.Group();torso.position.y=.95;R.add(torso);
+  const jacket=mesh(new THREE.CylinderGeometry(.33,.24,.72,24),suit);jacket.position.y=.38;jacket.scale.z=.72;torso.add(jacket);
+  const shoulders=mesh(new THREE.SphereGeometry(.34,24,12,0,Math.PI*2,0,Math.PI/2),suit);shoulders.scale.set(1.12,.42,.74);shoulders.position.y=.72;torso.add(shoulders);
+  const vee=new THREE.Shape();vee.moveTo(-.11,.0);vee.lineTo(.11,.0);vee.lineTo(0,-.34);vee.closePath();
+  const sh=new THREE.Mesh(new THREE.ShapeGeometry(vee),shirt);sh.position.set(0,.76,.243);torso.add(sh);
+  const tie=new THREE.Shape();tie.moveTo(-.03,0);tie.lineTo(.03,0);tie.lineTo(.045,-.24);tie.lineTo(0,-.3);tie.lineTo(-.045,-.24);tie.closePath();
+  const tm=new THREE.Mesh(new THREE.ShapeGeometry(tie),new THREE.MeshStandardMaterial({color:0x07070a,roughness:.3}));tm.position.set(0,.74,.246);torso.add(tm);
+  [-1,1].forEach(s=>{const lp=mesh(new THREE.BoxGeometry(.05,.36,.02),lapel,false);lp.position.set(s*.085,.6,.24);lp.rotation.z=-s*.32;torso.add(lp)});
+  const pin=new THREE.Mesh(new THREE.CircleGeometry(.025,16),glow(accent));pin.position.set(-.17,.58,.235);pin.rotation.y=-.3;torso.add(pin);
+  // head: dark chrome dome, wraparound shades, earpiece with coiled wire
+  const headPivot=new THREE.Group();headPivot.position.y=.82;torso.add(headPivot);
+  headPivot.add(mesh(new THREE.CylinderGeometry(.07,.08,.14,12),shell));
+  const head=new THREE.Group();head.position.y=.27;headPivot.add(head);
+  const skull=mesh(new THREE.SphereGeometry(.21,32,20),shell);skull.scale.set(.95,1.12,1);head.add(skull);
+  const jaw=mesh(rbox(.3,.12,.3,.06),shell);jaw.position.set(0,-.17,.02);head.add(jaw);
+  const glasses=mesh(new THREE.CylinderGeometry(.215,.215,.075,40,1,true,-1.2,2.4),shades,false);glasses.position.y=.02;glasses.scale.set(1.0,1,1.06);head.add(glasses);
+  const bridge=mesh(new THREE.BoxGeometry(.05,.02,.02),shades,false);bridge.position.set(0,.05,.226);head.add(bridge);
+  // status shows as a thin glint across the lenses
+  const glint=new THREE.Mesh(new THREE.BoxGeometry(.3,.008,.004),eye);glint.position.set(0,.045,.231);head.add(glint);
+  const ear=mesh(new THREE.SphereGeometry(.03,10,8),acc,false);ear.position.set(.2,-.01,.03);head.add(ear);
+  const coil=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(.2,-.03,.02),new THREE.Vector3(.2,-.14,-.04),new THREE.Vector3(.17,-.3,-.07),new THREE.Vector3(.13,-.42,-.05)]),20,.008,6,false),new THREE.MeshStandardMaterial({color:0xd9dde8,transparent:true,opacity:.75,roughness:.2}));head.add(coil);
+  // arms (hands clasped in front by default)
+  const arms={};
+  [-1,1].forEach(s=>{const sh=new THREE.Group();sh.position.set(s*.36,.62,0);torso.add(sh);
+    sh.add(mesh(new THREE.SphereGeometry(.1,16,10),suit));
+    const ua=mesh(new THREE.CylinderGeometry(.07,.065,.32,12),suit);ua.position.y=-.17;sh.add(ua);
+    const el=new THREE.Group();el.position.y=-.34;sh.add(el);el.add(mesh(new THREE.SphereGeometry(.065,12,8),suit));
+    const fa=mesh(new THREE.CylinderGeometry(.065,.058,.28,12),suit);fa.position.y=-.15;el.add(fa);
+    const cuff=mesh(new THREE.CylinderGeometry(.06,.06,.03,12),shirt);cuff.position.y=-.29;el.add(cuff);
+    const hand=mesh(new THREE.SphereGeometry(.065,14,10),shell);hand.scale.set(.9,1.1,.8);hand.position.y=-.35;el.add(hand);
+    arms[s<0?'L':'R']={sh,el,hand}});
+  R.scale.setScalar(1.08);
+  return {group:R,torso,headPivot,head,arms,eyes:[glint],eye,acc,gear:new THREE.Group(),role:'security',agent:true}
+}
 function makeChair(accent){const c=new THREE.Group();
   const seat=mesh(rbox(.62,.1,.58,.18),M.graphite);seat.position.y=.47;c.add(seat);
   const back=mesh(rbox(.6,.82,.08,.06),M.graphite);back.position.set(0,.6,-.33);back.rotation.x=-.12;c.add(back);
@@ -767,7 +818,7 @@ function buildOffice(b){
     for(let k=0;k<5;k++){const lf=mesh(new THREE.SphereGeometry(.34,10,8),M.green);lf.position.set(x+(rnd()-.5)*.5,.95+k*.18,z+(rnd()-.5)*.5);lf.scale.setScalar(1-k*.12);s.add(lf)}});
 
   // desks + robots
-  const bots=b.bots,n=Math.max(bots.length,bots.length?0:4),cols=Math.min(4,Math.max(1,n)),rows=Math.ceil(n/cols);
+  const guards=b.bots.filter(isSecurity),bots=b.bots.filter(x=>!isSecurity(x)),n=Math.max(bots.length,b.bots.length?0:4),cols=Math.min(4,Math.max(1,n)),rows=Math.ceil(n/cols);
   for(let i=0;i<n;i++){
     const r=Math.floor(i/cols),c=i%cols,inRow=r===rows-1?n-r*cols:cols;
     const x=(c-(inRow-1)/2)*3.5,z=2-r*3.9;
@@ -795,6 +846,22 @@ function buildOffice(b){
     station.traverse(o=>{if(o.isMesh){o.userData.botId=bot.id;O.pick.push(o)}});
     applyRobotStatus(R);
   }
+  // security agents stand guard on both sides of the big screen
+  guards.forEach((bot,k)=>{
+    const side=k%2?1:-1,row=Math.floor(k/2);
+    const station=new THREE.Group();station.position.set(side*(7.35+row*1.15),0,-7.9+row*.55);station.rotation.y=-side*.35;s.add(station);
+    const seat=new THREE.Group();station.add(seat);
+    const rob=makeAgent(bot,b.color);seat.add(rob.group);
+    const pad=new THREE.Mesh(new THREE.RingGeometry(.62,.7,48),addGlow(STATUS[bot.status].hex,.7));pad.rotation.x=-Math.PI/2;pad.position.y=.02;station.add(pad);
+    const lab=sprite(labelTex(bot.name,STATUS[bot.status].label,hexCss(b.color),STATUS[bot.status].css),2.05,.64);lab.position.y=2.95;station.add(lab);
+    const alarm=new THREE.Mesh(new THREE.ConeGeometry(.12,.2,16),glow(0xff4f6d));alarm.position.set(0,2.45,0);station.add(alarm);
+    const zz=sprite(ctex(128,128,(g)=>{g.fillStyle='#a3aad8';g.font='700 64px "Chakra Petch",sans-serif';g.fillText('z',20,90);g.font='700 44px "Chakra Petch",sans-serif';g.fillText('z',70,50)}),.45,.45);zz.position.set(.25,2.5,0);station.add(zz);
+    const st=ctex(8,8,()=>{});
+    const R={bot,station,seat,rob,lab,pad,screen:st,alarm,zz,phase:hashStr(bot.name)%100,face:0,wave:0,power:bot.status==='paused'?0:1,agent:true};
+    O.robots[bot.id]=R;
+    station.traverse(o=>{if(o.isMesh){o.userData.botId=bot.id;O.pick.push(o)}});
+    applyRobotStatus(R);
+  });
   O.anims.push(t=>{skylight.material.opacity=.45+.15*Math.sin(t*.8);for(const R of Object.values(O.robots))if(R.badge)R.badge.position.y=3.08+Math.sin(t*3+R.phase)*.05});
 }
 function badgeTex(n){return ctex(384,96,(g,w,h)=>{g.fillStyle='#ffd21f';rr(g,4,4,w-8,h-8,44);g.fill();g.fillStyle='#1a1404';g.font='700 44px "Chakra Petch",sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(n+' to review',w/2,h/2+2)})}
@@ -806,11 +873,33 @@ function refreshOffice(){
   const ids=b.bots.map(x=>x.id).sort().join(),have=Object.keys(O.robots).sort().join();
   if(ids!==have){buildOffice(b);return}
   b.bots.forEach(bot=>{const R=O.robots[bot.id];if(!R)return;R.bot=bot;applyRobotStatus(R);
-    const c=R.screen.userData;drawScreen(c.g,c.canvas.width,c.canvas.height,bot,hexCss(b.color));R.screen.needsUpdate=true;
+    if(!R.agent){const c=R.screen.userData;drawScreen(c.g,c.canvas.width,c.canvas.height,bot,hexCss(b.color));R.screen.needsUpdate=true}
     const old=R.lab.material.map;R.lab.material.map=labelTex(bot.name,STATUS[bot.status].label,hexCss(b.color),STATUS[bot.status].css);old.dispose()});
   if(O.wall){const c=O.wall.userData;drawWall(c.g,c.canvas.width,c.canvas.height,b);O.wall.needsUpdate=true}
 }
 const _eyeCol=new THREE.Color(),_offCol=new THREE.Color(0x14172a);
+function animateAgent(R,t,dt,ease,pw,st){
+  const rob=R.rob,p=R.phase,L=rob.arms.L,Rt=rob.arms.R,off=1-ease,mix=(a,b)=>a*(1-off)+b*off;
+  // on duty: hands clasped in front, slow scan of the room; on alert: hand to earpiece, head snaps around
+  let shL=-.18,zL=.22,elL=-1.25,shR=-.18,zR=-.22,elR=-1.25,headX=0,headY=Math.sin(t*.45+p)*.5;
+  if(st==='error'){shR=-2.55;zR=-.3;elR=-2.35;headY=Math.sin(t*3+p)*.7;R.alarm.rotation.y=t*6}
+  // tapped: turns to you, touches the earpiece and gives a nod
+  const f=R.face*ease;
+  if(f>.02){headY*=1-f;shR=shR*(1-f)+(-2.55)*f;zR=zR*(1-f)+(-.3)*f;elR=elR*(1-f)+(-2.35)*f;headX=Math.max(0,Math.sin(t*4))*.18*f}
+  shL=mix(shL,.05);zL=mix(zL,.1);elL=mix(elL,-.05);shR=mix(shR,.05);zR=mix(zR,-.1);elR=mix(elR,-.05);
+  headX=mix(headX,.5);headY=mix(headY,0);
+  const inL=mix(.75,0),inR=mix(-.75,0)*(1-f)*(st==='error'?0:1);
+  L.sh.rotation.set(shL,0,zL);L.el.rotation.set(elL,0,inL);Rt.sh.rotation.set(shR,0,zR);Rt.el.rotation.set(elR,0,inR);
+  rob.headPivot.rotation.set(headX,headY,0);rob.torso.rotation.x=mix(0,.12);
+  R.seat.rotation.y=R.face*R.station.rotation.y*-1; // face the camera when tapped
+  _eyeCol.setHex(st==='error'?(Math.sin(t*9)>0?0xff4f6d:0x3a0a14):STATUS[st==='paused'?'paused':st].hex);
+  const flicker=pw>.05&&pw<.95?(Math.sin(t*47+p)>.2?1:.15):1;
+  rob.eye.color.copy(_offCol).lerp(_eyeCol,Math.min(1,ease*1.15)*flicker);
+  rob.acc.emissiveIntensity=.08+.47*ease;
+  R.zz.visible=pw<.15;R.zz.position.y=2.45+((t*.4+p*.01)%1)*.35;R.zz.material.opacity=(1-((t*.4+p*.01)%1))*(1-pw/.15);
+  R.pad.material.opacity=(.45+.25*Math.sin(t*2+p))*(.35+.65*ease);
+  R.lab.visible=!focusBot;
+}
 function animateRobots(t,dt){
   Object.values(O.robots).forEach(R=>{
     const st=R.bot.status,rob=R.rob,p=R.phase,L=rob.arms.L,Rt=rob.arms.R,focus=focusBot===R.bot.id;
@@ -818,6 +907,7 @@ function animateRobots(t,dt){
     const want=st==='paused'?0:1;R.power+=Math.sign(want-R.power)*Math.min(Math.abs(want-R.power),dt*.7);
     const pw=R.power,ease=pw*pw*(3-2*pw);
     R.face+=((focus?1:0)-R.face)*Math.min(1,dt*4);
+    if(R.agent){animateAgent(R,t,dt,ease,pw,st);return}
     R.seat.rotation.y=Math.PI*(1-R.face);
     // active pose for the bot's status
     let shL=-.72,elL=-.6,shR=-.72,elR=-.6,zL=0,zR=0,headX=0,headY=0;
@@ -894,7 +984,7 @@ function exitOffice(){fadeTo(()=>{mode='city';currentBiz=null;focusBot=null;disp
   document.body.classList.remove('office','open','focus');panel.hidden=true;hint.hidden=false;hint.textContent='Drag to look around · Tap a building to enter';whereEl.textContent='';
   Object.assign(goal.city,CITY_HOME)})}
 function focusOn(id){const R=O.robots[id];if(!R)return;if(history.state&&history.state.v==='bot')history.replaceState({v:'bot'},'');else history.pushState({v:'bot'},'');focusBot=id;document.body.classList.add('focus');
-  const p=R.station.position;Object.assign(goal.office,{tx:p.x,ty:1.35,tz:p.z,r:SMALL?4.6:4,phi:1.28,theta:0});renderPanel()}
+  const p=R.station.position;Object.assign(goal.office,{tx:p.x,ty:R.agent?1.6:1.35,tz:p.z,r:SMALL?4.6:4,phi:R.agent?1.36:1.28,theta:0});renderPanel()}
 function unfocus(){focusBot=null;document.body.classList.remove('focus');Object.assign(goal.office,OFF_HOME);renderPanel()}
 function back(){if(mode!=='office')return;if(history.state&&history.state.v){history.back();return}if(focusBot)unfocus();else exitOffice()}
 function toCity(){if(mode!=='office')return;const v=history.state&&history.state.v;if(v==='bot')history.go(-2);else if(v==='office')history.back();else exitOffice()}
