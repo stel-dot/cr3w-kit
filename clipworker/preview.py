@@ -6,4 +6,4 @@ import app
 
 name, link, hook = sys.argv[1], sys.argv[2], ' '.join(sys.argv[3:])
 url = link if '://' in link else 'https://' + link
-print(json.dumps(app.render_short({'id': name, 'url': url, 'hook': hook or None, 'streamer': ''}), indent=1))
+print(json.dumps(app.render_short({'id': name, 'url': url, 'hook': hook or None, 'streamer': '', 'clean': True}), indent=1))

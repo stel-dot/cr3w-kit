@@ -396,7 +396,9 @@ def render_short(job):
         except Exception as e:
             words = []
             job['caption_error'] = str(e)[:200]
-    bleeps = censor(words, jid) if not job.get('keep_language') else []
+    # Turned on for every Short once the file /data/clean_on exists (or per job with clean: true)
+    clean = job.get('clean', os.path.exists(f'{DATA}/clean_on'))
+    bleeps = censor(words, jid) if clean else []
     title_y, title_h = 190, 380
     landscape = info['w'] / info['h'] >= 1.2
     if landscape:
