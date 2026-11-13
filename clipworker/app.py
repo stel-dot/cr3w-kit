@@ -460,7 +460,7 @@ def clip_file(name):
 def health():
     du = shutil.disk_usage(DATA)
     return jsonify({'ok': True, 'clips': len(os.listdir(CLIPS)), 'free_gb': round(du.free / 1e9, 1),
-                    'cookies': os.path.exists(f'{DATA}/cookies.txt')})
+                    'cookies': os.path.exists(f'{DATA}/cookies.txt'), 'replay': True})
 
 
 def cleanup_loop():
