@@ -201,7 +201,7 @@ def ass_time(t):
     return f'{int(t // 3600)}:{int(t % 3600 // 60):02d}:{t % 60:05.2f}'
 
 
-def make_ass(words, path, caption_y, replays=(), replay_y=660):
+def make_ass(words, path, caption_y, replays=(), replay_y=660, actions=()):
     # 1-2 words at a time, big, colour rotating white / yellow / cyan, small pop-in like the reference Shorts
     cols = ['&H00FFFFFF', '&H004DE1FF', '&H00FFE03F']  # ASS colours are BGR
     head = ('[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nWrapStyle: 2\n\n'
@@ -210,10 +210,11 @@ def make_ass(words, path, caption_y, replays=(), replay_y=660):
             f'Style: Cap,Montserrat Black,108,&H00FFFFFF,&H00FFFFFF,&H00000000,&H96000000,0,0,0,0,100,100,0,0,1,7,4,2,60,60,{H - caption_y},1\n'
             'Style: Rep,Montserrat Black,62,&H001FD4FF,&H001FD4FF,&H00000000,&H96000000,0,0,0,0,100,100,2,0,1,6,3,8,60,60,0,1\n\n'
             '[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n')
+    words = [w for w in words if not any(t - .1 < w['s'] < t + 1.3 for t, _, _ in actions)]
     groups, chunk = [], []
     def flush():
         if chunk:
-            groups.append({'txt': ' '.join(w['t'] for w in chunk).replace('{', '').replace('}', ''),
+            groups.append({'txt': ' '.join(w['t'] for w in chunk).replace('{', '').replace('}', '').upper(),
                            's': chunk[0]['s'], 'e': max(chunk[-1]['e'], chunk[0]['s'] + .25)})
             chunk.clear()
     for i, w in enumerate(words):
@@ -230,70 +231,99 @@ def make_ass(words, path, caption_y, replays=(), replay_y=660):
         e = nxt if nxt is not None and nxt - g['e'] < .6 else g['e'] + .15
         col = cols[i % len(cols)]
         lines.append(f"Dialogue: 0,{ass_time(g['s'])},{ass_time(e)},Cap,,0,0,0,,{{\\c{col}\\fscx82\\fscy82\\t(0,90,\\fscx100\\fscy100)}}{g['txt']}")
+    for t, _, label in actions:
+        lines.append(f"Dialogue: 2,{ass_time(t)},{ass_time(t + 1.3)},Cap,,0,0,0,,{{\\c&H001FD4FF\\fscx70\\fscy70\\t(0,120,\\fscx108\\fscy108)\\t(120,220,\\fscx100\\fscy100)}}{label}")
     for a, b in replays:
         lines.append(f"Dialogue: 1,{ass_time(a)},{ass_time(b)},Rep,,0,0,0,,{{\\pos(540,{replay_y})\\fad(150,150)}}INSTANT REPLAY")
     with open(path, 'w', encoding='utf-8') as f:
         f.write(head + '\n'.join(lines) + '\n')
 
 
-# ---------- Clean-up: swap curse words in captions, cover them in the audio with meme sounds ----------
+# ---------- Clean-up, styled like popular clip pages ----------
+# Curse words: the voice is cut to silence for that word (sometimes a muffled bass thud instead),
+# and the caption stars one letter out (F*CK, B*TCH). The meme sound goes on the loudest
+# "reaction" moment of the clip with an action caption like *CRASHES OUT*.
 SFX_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sfx')
-SFX = ['boom', 'quack', 'bleep', 'boing', 'airhorn', 'whistle']
-SWAPS = [  # (pattern on the bare lowercase word, replacement)
-    (r'(mother)?f[u*]+c?k+', lambda m: (m.group(1) and 'mother' or '') + 'duck'),
-    (r'f\*+', lambda m: 'duck'),
-    (r'sh[i*]+t+', lambda m: 'shoot'),
-    (r'bullsh[i*]+t+', lambda m: 'bullshoot'),
-    (r'b[i*]+tch', lambda m: 'witch'),
-    (r'n[i*]+gg(a|er|uh)', lambda m: 'ninja'),
-    (r'a+ss+hole', lambda m: 'butthole'),
-    (r'(dumb|jack|bad|smart|kick)?a+ss+', lambda m: (m.group(1) or '') + 'butt'),
-    (r'd[i*]+ck(head)?', lambda m: 'pickle' + (m.group(1) or '')),
-    (r'puss(y|ies)', lambda m: 'kitty'),
-    (r'damn+(it)?', lambda m: 'dang' + (m.group(1) or '')),
-    (r'goddamn+(it)?', lambda m: 'goshdang' + (m.group(1) or '')),
-    (r'bastard', lambda m: 'custard'),
-    (r'cunt', lambda m: 'punt'),
-    (r'hoe?s?', lambda m: 'hoe'),  # placeholder, removed below (farm tool, too ambiguous)
+CURSES = [  # (word pattern, which letter to star)
+    (r'(mother)?f[u*]+c?k+', r'(?<=f)u'),
+    (r'f\*+', None),
+    (r'(bull)?sh[i*]+t+', r'(?<=h)i'),
+    (r'b[i*]+tch', r'(?<=b)i'),
+    (r'n[i*]+gg(a|er|uh)', r'(?<=n)i'),
+    (r'a+ss+hole', r'(?<=a)s'),
+    (r'(dumb|jack|bad|smart|kick)?a+ss+', r'a(?=s)'),
+    (r'd[i*]+ck(head)?', r'(?<=d)i'),
+    (r'puss(y|ies)', r'(?<=p)u'),
+    (r'(god)?damn+(it)?', r'(?<=d)a(?=mn)'),
+    (r'bastard', r'(?<=b)a'),
+    (r'cunt', r'(?<=c)u'),
 ]
-SWAPS = [(re.compile(r'^' + pat + r'(in|ing|ed|er|ers|s|es|y)?$'), fn) for pat, fn in SWAPS if not pat.startswith('hoe')]
+CURSES = [(re.compile(r'^' + pat + r'(in|ing|ed|er|ers|s|es|y)?$'), star) for pat, star in CURSES]
+ACTIONS = ['*CRASHES OUT*', '*LOSES IT*', '*SCREAMING*', '*SHOCKED*']
+HYPE_SFX = ['woo', 'woo', 'boom', 'airhorn']
 
 
 def clean_word(w):
-    """Returns (new_word, was_curse)."""
-    m0 = re.match(r'^([^\w*]*)([\w*\']+?)([^\w*]*)$', w)
+    """Returns (caption_word, was_curse). Stars one letter out of a curse word."""
+    m0 = re.match(r"^([^\w*]*)([\w*']+?)([^\w*]*)$", w)
     if not m0:
         return w, False
     pre, core, post = m0.groups()
     low = core.lower().replace("'", '')
-    for rx, fn in SWAPS:
-        m = rx.match(low)
-        if m:
-            new = fn(m) + (m.group(m.lastindex) if m.lastindex and m.group(m.lastindex) and rx.groups and m.lastindex == rx.groups else '')
-            if core.isupper() and len(core) > 1:
-                new = new.upper()
-            elif core[:1].isupper():
-                new = new[:1].upper() + new[1:]
+    for rx, star in CURSES:
+        if rx.match(low):
+            new = core if not star else re.sub(star, '*', core, count=1, flags=re.I)
             return pre + new + post, True
     return w, False
 
 
 def censor(words, seed):
+    import random
+    rnd = random.Random(seed)
     spans = []
     for w in words:
         new, bad = clean_word(w['t'])
         if bad:
             w['t'] = new
-            spans.append((max(0, w['s'] - .06), w['e'] + .06))
+            spans.append([max(0, w['s'] - .04), w['e'] + .04])
     merged = []
     for a, b in spans:
-        if merged and a - merged[-1][1] < .25:
-            merged[-1] = (merged[-1][0], max(b, merged[-1][1]))
+        if merged and a - merged[-1][1] < .2:
+            merged[-1][1] = max(b, merged[-1][1])
         else:
-            merged.append((a, b))
-    import random
-    rnd = random.Random(seed)
-    return [(a, b, rnd.choice(SFX)) for a, b in merged]
+            merged.append([a, b])
+    # mostly silent cuts, about 1 in 4 gets the muffled thud
+    return [(a, b, 'thud' if rnd.random() < .25 else None) for a, b in merged]
+
+
+def hype_moments(wav, dur, seed, cuts=()):
+    """Finds the loudest burst in the clip (yelling, crash-outs) for a meme sound + action caption."""
+    import random, wave, numpy as np
+    rnd = random.Random(seed + 'hype')
+    try:
+        with wave.open(wav, 'rb') as f:
+            sr = f.getframerate()
+            x = np.frombuffer(f.readframes(f.getnframes()), dtype=np.int16).astype(np.float32) / 32768.0
+    except Exception:
+        return []
+    hop = int(sr * .25)
+    if len(x) < hop * 12:
+        return []
+    rms = np.array([np.sqrt(np.mean(x[i:i + hop * 2] ** 2) + 1e-9) for i in range(0, len(x) - hop * 2, hop)])
+    med = float(np.median(rms))
+    out = []
+    want = 2 if dur > 50 else 1
+    order = np.argsort(rms)[::-1]
+    for i in order:
+        t = i * .25
+        if rms[i] < med * 2.2 or t < 1.5 or t > dur - 1.5:
+            break
+        if any(abs(t - o[0]) < 8 for o in out) or any(a - .8 < t < b + .3 for a, b, _ in cuts):
+            continue
+        out.append((t, rnd.choice(HYPE_SFX), rnd.choice(ACTIONS)))
+        if len(out) >= want:
+            break
+    return sorted(out)
 
 
 def wrap(draw, text, font, maxw):
@@ -398,7 +428,8 @@ def render_short(job):
             job['caption_error'] = str(e)[:200]
     # Turned on for every Short once the file /data/clean_on exists (or per job with clean: true)
     clean = job.get('clean', os.path.exists(f'{DATA}/clean_on'))
-    bleeps = censor(words, jid) if clean else []
+    cuts = censor(words, jid) if clean else []
+    hype = hype_moments(f'{work}/a.wav', min(info['dur'], float(job.get('max_seconds') or 170)), jid, cuts) if clean and info['audio'] else []
     title_y, title_h = 190, 380
     landscape = info['w'] / info['h'] >= 1.2
     if landscape:
@@ -410,7 +441,7 @@ def render_short(job):
         fg = f'scale={W}:-2,crop={W}:min(ih\\,{fg_h})'
         cap_y = fg_y + fg_h - 230
     make_title(job.get('hook') or hook_from(job.get('title'), job.get('streamer')), f'{work}/title.png', title_h)
-    make_ass(words, f'{work}/cap.ass', cap_y, replays, fg_y + 70)
+    make_ass(words, f'{work}/cap.ass', cap_y, replays, fg_y + 70, hype)
     fc = (f'[0:v]fps=30,split[a][b];'
           f'[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},hflip,gblur=sigma=30,eq=brightness=-0.10:saturation=1.15[bg];'
           f'[b]{fg}[fg];[bg][fg]overlay=(W-w)/2:{fg_y}+({fg_h}-h)/2[v1];'
@@ -418,16 +449,19 @@ def render_short(job):
           f"[v2]subtitles=filename={work}/cap.ass:fontsdir={FONTS}[v]")
     cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-i', f'{work}/title.png']
     amap = '0:a:0'
-    if info['audio'] and bleeps:
-        mute = '+'.join(f'between(t,{a:.2f},{b:.2f})' for a, b, _ in bleeps)
-        fc += f";[0:a:0]aformat=sample_rates=44100:channel_layouts=stereo,volume=0:enable='{mute}'[a0]"
-        mix = '[a0]'
-        for i, (a, b, name) in enumerate(bleeps):
+    if info['audio'] and (cuts or hype):
+        base = '[0:a:0]aformat=sample_rates=44100:channel_layouts=stereo'
+        if cuts:
+            base += ",volume=0:enable='" + '+'.join(f'between(t,{a:.2f},{b:.2f})' for a, b, _ in cuts) + "'"
+        fc += f';{base}[a0]'
+        mix, n = '[a0]', 0
+        for at, name, vol in [(a, k, .9) for a, b, k in cuts if k] + [(t, k, .75) for t, k, _ in hype]:
             cmd += ['-i', f'{SFX_DIR}/{name}.wav']
-            ms = int(a * 1000)
-            fc += f';[{i + 2}:a]aformat=sample_rates=44100:channel_layouts=stereo,volume=0.85,adelay={ms}|{ms}[s{i}]'
-            mix += f'[s{i}]'
-        fc += f';{mix}amix=inputs={len(bleeps) + 1}:duration=first:normalize=0[a]'
+            ms = int(at * 1000)
+            fc += f';[{n + 2}:a]aformat=sample_rates=44100:channel_layouts=stereo,volume={vol},adelay={ms}|{ms}[s{n}]'
+            mix += f'[s{n}]'
+            n += 1
+        fc += f';{mix}amix=inputs={n + 1}:duration=first:normalize=0[a]' if n else ';[a0]anull[a]'
         amap = '[a]'
     cmd += ['-filter_complex', fc, '-map', '[v]']
     if info['audio']:
@@ -437,7 +471,7 @@ def render_short(job):
     run(cmd, 1800)
     shutil.rmtree(work, ignore_errors=True)
     return {'ok': True, 'id': jid, 'file': os.path.basename(out), 'url': f'{PUBLIC}/clips/{os.path.basename(out)}',
-            'duration': round(dur, 1), 'captions': len(words), 'size_mb': round(os.path.getsize(out) / 1e6, 1), 'replays': len(replays), 'cleaned': len(bleeps),
+            'duration': round(dur, 1), 'captions': len(words), 'size_mb': round(os.path.getsize(out) / 1e6, 1), 'replays': len(replays), 'cleaned': len(cuts), 'hype': [h[2] for h in hype],
             'caption_error': job.get('caption_error')}
 
 
