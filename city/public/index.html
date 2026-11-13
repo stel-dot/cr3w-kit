@@ -734,9 +734,8 @@ const isSecurity=bot=>!!bot.security||/^(gatekeeper|watchtower|sentinel|patch cr
 function makeAgent(bot,accent){
   const hs=hashStr(bot.name);
   const R=new THREE.Group();
-  const SKIN=[0x8d5524,0xc68642,0x5c3a21,0xe0ac69,0x6b4423][hs%5];
-  const skin=new THREE.MeshStandardMaterial({color:new THREE.Color(SKIN).convertSRGBToLinear(),roughness:.55,metalness:0});
-  const hair=new THREE.MeshStandardMaterial({color:new THREE.Color(0x14100c).convertSRGBToLinear(),roughness:.9});
+  const shellW=new THREE.MeshStandardMaterial({color:0xeef1f8,metalness:.2,roughness:.24,envMap:ENV,envMapIntensity:1.1});
+  const robo=new THREE.MeshStandardMaterial({color:0x161a29,metalness:.65,roughness:.28,envMap:ENV});
   // fine wool texture for the suit
   const wool=ctex(128,128,(g,w,h)=>{g.fillStyle='#808080';g.fillRect(0,0,w,h);for(let i=0;i<2200;i++){const v=110+rnd()*40|0;g.fillStyle=`rgb(${v},${v},${v})`;g.fillRect(rnd()*w,rnd()*h,1,2)}
     g.globalAlpha=.08;g.strokeStyle='#fff';for(let x=0;x<w;x+=6){g.beginPath();g.moveTo(x,0);g.lineTo(x,h);g.stroke()}});
@@ -782,15 +781,14 @@ function makeAgent(bot,accent){
   const pin=new THREE.Mesh(new THREE.CircleGeometry(.014,16),glow(accent));pin.position.set(.15,.6,.2);pin.rotation.y=.4;torso.add(pin);
   // head: neck, buzz cut, ears, nose, aviators, earpiece
   const headPivot=new THREE.Group();headPivot.position.y=.8;torso.add(headPivot);
-  headPivot.add(mesh(new THREE.CylinderGeometry(.065,.075,.14,14),skin));
-  const head=new THREE.Group();head.position.y=.2;headPivot.add(head);
-  const skull=mesh(new THREE.SphereGeometry(.13,32,24),skin);skull.scale.set(.92,1.12,1.02);head.add(skull);
-  const jaw=mesh(new THREE.SphereGeometry(.1,24,16),skin);jaw.scale.set(1,.7,1);jaw.position.set(0,-.07,.02);head.add(jaw);
-  const cut=mesh(new THREE.SphereGeometry(.134,32,16,0,Math.PI*2,0,Math.PI*.44),hair);cut.scale.set(.93,1.12,1.04);cut.position.set(0,.006,-.006);cut.rotation.x=-.25;head.add(cut);
-  const nose=mesh(new THREE.ConeGeometry(.018,.05,8),skin,false);nose.rotation.x=Math.PI/2+.35;nose.position.set(0,-.02,.135);head.add(nose);
-  [-1,1].forEach(s=>{const ear=mesh(new THREE.SphereGeometry(.028,10,8),skin,false);ear.scale.set(.45,1,.8);ear.position.set(s*.12,0,0);head.add(ear)});
-  const mouth=mesh(new THREE.BoxGeometry(.05,.005,.005),new THREE.MeshStandardMaterial({color:0x2a1410}),false);mouth.position.set(0,-.07,.118);head.add(mouth);
-  const shades=new THREE.Group();shades.position.set(0,.025,.118);head.add(shades);
+  headPivot.add(mesh(new THREE.CylinderGeometry(.06,.075,.14,14),robo));
+  const head=new THREE.Group();head.position.y=.21;headPivot.add(head);
+  // robot head like the rest of the crew: pearl shell dome, dark face visor, glowing ear discs
+  const skull=mesh(new THREE.SphereGeometry(.15,32,24),shellW);skull.scale.set(1,1.06,1);head.add(skull);
+  const face=mesh(new THREE.SphereGeometry(.152,32,12,Math.PI/2-.95,1.9,Math.PI/2-.42,.7),robo,false);head.add(face);
+  [-1,1].forEach(s=>{const ear=mesh(new THREE.CylinderGeometry(.045,.045,.035,20),acc,false);ear.rotation.z=Math.PI/2;ear.position.set(s*.152,-.005,0);head.add(ear)});
+  const grill=mesh(new THREE.BoxGeometry(.06,.006,.006),acc,false);grill.position.set(0,-.075,.138);head.add(grill);
+  const shades=new THREE.Group();shades.position.set(0,.02,.15);head.add(shades);
   const tear=new THREE.Shape();tear.moveTo(-.045,.02);tear.quadraticCurveTo(0,.035,.045,.02);tear.quadraticCurveTo(.05,-.035,.005,-.04);tear.quadraticCurveTo(-.045,-.03,-.045,.02);
   [-1,1].forEach(s=>{const g=new THREE.ExtrudeGeometry(tear,{depth:.006,bevelEnabled:true,bevelThickness:.003,bevelSize:.003,bevelSegments:2,curveSegments:10});
     const ln=mesh(g,lens,false);ln.scale.x=s;ln.position.set(s*.05,0,0);ln.rotation.y=s*.18;shades.add(ln);
@@ -799,8 +797,8 @@ function makeAgent(bot,accent){
   const br2=br.clone();br2.position.y=.03;shades.add(br2);
   // status shows as a glint across the lenses
   const glint=new THREE.Mesh(new THREE.BoxGeometry(.17,.004,.002),eye);glint.position.set(0,.012,.014);shades.add(glint);
-  const bud=mesh(new THREE.SphereGeometry(.016,10,8),acc,false);bud.position.set(.125,-.005,.01);head.add(bud);
-  const coil=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(.125,-.02,.0),new THREE.Vector3(.12,-.1,-.04),new THREE.Vector3(.11,-.2,-.06),new THREE.Vector3(.1,-.3,-.04)]),24,.004,6,false),new THREE.MeshStandardMaterial({color:0xe6eaf2,transparent:true,opacity:.7,roughness:.15}));head.add(coil);
+  const bud=mesh(new THREE.SphereGeometry(.018,10,8),robo,false);bud.position.set(.172,-.005,.02);head.add(bud);
+  const coil=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(.172,-.02,.01),new THREE.Vector3(.16,-.12,-.04),new THREE.Vector3(.13,-.22,-.06),new THREE.Vector3(.1,-.32,-.04)]),24,.004,6,false),new THREE.MeshStandardMaterial({color:0xe6eaf2,transparent:true,opacity:.7,roughness:.15}));head.add(coil);
   // arms: suit sleeves, shirt cuffs, hands
   const arms={};
   [-1,1].forEach(s=>{const sh=new THREE.Group();sh.position.set(s*.3,.65,0);torso.add(sh);
@@ -809,7 +807,7 @@ function makeAgent(bot,accent){
     const el=new THREE.Group();el.position.y=-.32;sh.add(el);el.add(mesh(new THREE.SphereGeometry(.06,12,8),suit));
     const fa=mesh(new THREE.CylinderGeometry(.06,.052,.27,14),suit);fa.position.y=-.14;el.add(fa);
     const cuff=mesh(new THREE.CylinderGeometry(.047,.047,.03,14),shirt);cuff.position.y=-.285;el.add(cuff);
-    const hand=mesh(new THREE.SphereGeometry(.05,14,10),skin);hand.scale.set(.85,1.25,.65);hand.position.y=-.34;el.add(hand);
+    const hand=mesh(new THREE.SphereGeometry(.055,14,10),robo);hand.scale.set(.9,1.15,.75);hand.position.y=-.34;el.add(hand);
     arms[s<0?'L':'R']={sh,el,hand}});
   R.scale.setScalar(1.12);
   return {group:R,torso,headPivot,head,arms,eyes:[glint],eye,acc,gear:new THREE.Group(),role:'security',agent:true}
@@ -945,13 +943,13 @@ function animateAgent(R,t,dt,ease,pw,st){
   const rob=R.rob,p=R.phase,L=rob.arms.L,Rt=rob.arms.R,off=1-ease,mix=(a,b)=>a*(1-off)+b*off;
   // on duty: hands clasped in front, slow scan of the room; on alert: hand to earpiece, head snaps around
   let shL=-.18,zL=.22,elL=-1.25,shR=-.18,zR=-.22,elR=-1.25,headX=0,headY=Math.sin(t*.45+p)*.5;
-  if(st==='error'){shR=-2.55;zR=-.3;elR=-2.35;headY=Math.sin(t*3+p)*.7;R.alarm.rotation.y=t*6}
+  if(st==='error'){shR=-2.75;zR=-.18;elR=-2.55;shL=.05;zL=.14;elL=-.12;headY=Math.sin(t*3+p)*.7;R.alarm.rotation.y=t*6}
   // tapped: turns to you, touches the earpiece and gives a nod
   const f=R.face*ease;
-  if(f>.02){headY*=1-f;shR=shR*(1-f)+(-2.55)*f;zR=zR*(1-f)+(-.3)*f;elR=elR*(1-f)+(-2.35)*f;headX=Math.max(0,Math.sin(t*4))*.18*f}
+  if(f>.02){headY*=1-f;shR=shR*(1-f)+(-2.75)*f;zR=zR*(1-f)+(-.18)*f;elR=elR*(1-f)+(-2.55)*f;shL=shL*(1-f)+.05*f;zL=zL*(1-f)+.14*f;elL=elL*(1-f)+(-.12)*f;headX=Math.max(0,Math.sin(t*4))*.18*f}
   shL=mix(shL,.05);zL=mix(zL,.1);elL=mix(elL,-.05);shR=mix(shR,.05);zR=mix(zR,-.1);elR=mix(elR,-.05);
   headX=mix(headX,.5);headY=mix(headY,0);
-  const inL=mix(.75,0),inR=mix(-.75,0)*(1-f)*(st==='error'?0:1);
+  const touch=st==='error'?1:f,inL=mix(.75,0)*(1-touch),inR=mix(-.75,0)*(1-touch);
   L.sh.rotation.set(shL,0,zL);L.el.rotation.set(elL,0,inL);Rt.sh.rotation.set(shR,0,zR);Rt.el.rotation.set(elR,0,inR);
   rob.headPivot.rotation.set(headX,headY,0);rob.torso.rotation.x=mix(0,.12);
   R.seat.rotation.y=R.face*R.station.rotation.y*-1; // face the camera when tapped
