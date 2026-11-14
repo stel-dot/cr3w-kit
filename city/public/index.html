@@ -967,15 +967,13 @@ function buildOffice(b){
   // parametric wood ceiling ribbons with light coves
   const ceil=new THREE.Group();ceil.position.z=-1.5;s.add(ceil);
   if(cr){
-    // cream ceiling with a recessed panel, warm cove light and a walnut trim band
-    const cm=c=>new THREE.MeshStandardMaterial({color:c,roughness:.8,side:THREE.DoubleSide});
-    const slab=new THREE.Mesh(new THREE.CircleGeometry(14,64),cm(0x8f877a));slab.rotation.x=Math.PI/2;slab.position.set(0,6.9,1.5);ceil.add(slab);
-    const inner=new THREE.Mesh(new THREE.CircleGeometry(1,64),cm(0xa39a8b));inner.scale.set(9,6,1);inner.rotation.x=Math.PI/2;inner.position.set(0,7.25,1.5);ceil.add(inner);
-    const riser=new THREE.Mesh(new THREE.CylinderGeometry(1,1,.36,96,1,true),cm(0x9a9183));riser.scale.set(9,1,6);riser.position.set(0,7.07,1.5);ceil.add(riser);
-    const cove=new THREE.Mesh(new THREE.TorusGeometry(1,.006,6,160),glow(0xffd9a0));cove.scale.set(8.9,5.9,8);cove.rotation.x=Math.PI/2;cove.position.set(0,7.2,1.5);ceil.add(cove);
-    const walnut=new THREE.MeshStandardMaterial({color:0x5a3520,roughness:.5,envMap:ENV_WARM,envMapIntensity:.4});
-    const trim=new THREE.Mesh(new THREE.TorusGeometry(1,.012,6,160),walnut);trim.scale.set(9.25,6.25,6);trim.rotation.x=Math.PI/2;trim.position.set(0,6.88,1.5);ceil.add(trim);
-    const line=new THREE.Mesh(new THREE.TorusGeometry(1,.003,4,160),glow(0xfff1d6));line.scale.set(11.5,8.2,8);line.rotation.x=Math.PI/2;line.position.set(0,6.87,1.5);ceil.add(line);
+    // dark ceiling slab with angular gold light lines
+    const slab=new THREE.Mesh(new THREE.CircleGeometry(14,64),new THREE.MeshStandardMaterial({color:0x0c0c10,roughness:.7,side:THREE.DoubleSide}));slab.rotation.x=Math.PI/2;slab.position.set(0,6.9,1.5);ceil.add(slab);
+    const pts=[[-11,-6],[-6,-8],[0,-7],[6,-9],[11,-5],[-12,0],[-5,-2],[2,-1],[8,0],[12,1],[-10,5],[-3,4],[4,6],[10,6]];
+    const links=[[0,1],[1,2],[2,3],[3,4],[0,6],[1,6],[2,7],[3,8],[4,9],[5,6],[6,7],[7,8],[8,9],[5,10],[6,11],[7,11],[7,12],[8,12],[8,13],[9,13],[10,11],[11,12],[12,13]];
+    const goldL=glow(0xff9a1f);
+    links.forEach(([i,j])=>{const [x1,z1]=pts[i],[x2,z2]=pts[j],L=Math.hypot(x2-x1,z2-z1);
+      const bar=new THREE.Mesh(new THREE.BoxGeometry(L,.02,.035),goldL);bar.position.set((x1+x2)/2,6.87,(z1+z2)/2);bar.rotation.y=-Math.atan2(z2-z1,x2-x1);ceil.add(bar)});
     // cream marble feature walls with walnut slat panels beside the big screen
     if(!O.marbleWall){O.marbleWall=marbleTex(512,'light',3);O.marbleWall.wrapS=O.marbleWall.wrapT=THREE.RepeatWrapping;O.marbleWall.repeat.set(2,1);O.marbleWall.userData.keep=true}
     if(!O.slatTex){O.slatTex=ctex(256,64,(g,w,h)=>{for(let x=0;x<w;x+=16){const v=rnd();g.fillStyle=`rgb(${96+v*26|0},${58+v*16|0},${34+v*10|0})`;g.fillRect(x,0,13,h);g.fillStyle='#1a0f08';g.fillRect(x+13,0,3,h)}});O.slatTex.wrapS=THREE.RepeatWrapping;O.slatTex.repeat.set(3,1);O.slatTex.userData.keep=true}
