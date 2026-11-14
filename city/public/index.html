@@ -295,13 +295,12 @@ body.office .feed{display:none}
 <div class="fade" id="fade"></div>
 <div class="theme" id="theme" hidden role="dialog" aria-label="Interface colors">
   <h3>Colors <button class="close" id="theme-close" aria-label="Close">×</button></h3>
-  <div><div class="lbl">Presets</div><div class="swatches" id="swatches"></div></div>
+  <div><div class="lbl">Button colors</div><div class="swatches" id="swatches"></div></div>
   <div><div class="lbl">Custom</div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      <label class="pick">Panel color <input type="color" id="c-panel"></label>
-      <label class="pick">Panel see-through <input type="range" id="c-alpha" min="55" max="100"></label>
       <label class="pick">Button color <input type="color" id="c-btn"></label>
-      <label class="pick">Accent (main buttons, highlights) <input type="color" id="c-accent"></label>
+      <label class="pick">Main button color (and highlights) <input type="color" id="c-accent"></label>
+      <label class="pick">Panel see-through <input type="range" id="c-alpha" min="60" max="100"></label>
     </div></div>
   <button class="btn quiet" id="c-reset" type="button">Reset to CR3W gold</button>
 </div>
@@ -334,38 +333,39 @@ const REDUCE=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let BIZ=[],RUNS=0,mode='city',currentBiz=null,focusBot=null;
 
 // ---------- interface colors (saved on this device) ----------
+const PANEL_BLACK='#0b0b0d'; // panels are always black, text always white
 const THEMES={
-  gold:{name:'CR3W Gold',panel:'#14151f',btn:'#2a2b36',accent:'#f2c14e',alpha:90},
-  ice:{name:'Ice',panel:'#0f1a26',btn:'#1d3247',accent:'#5fd3ff',alpha:88},
-  violet:{name:'Violet',panel:'#16112a',btn:'#2c2350',accent:'#a98bff',alpha:88},
-  emerald:{name:'Emerald',panel:'#0d1a16',btn:'#1c3a30',accent:'#2fe0a0',alpha:88},
-  crimson:{name:'Crimson',panel:'#1c0f13',btn:'#3a1c24',accent:'#ff5a6e',alpha:90},
-  sunset:{name:'Sunset',panel:'#1d130e',btn:'#3d2618',accent:'#ff9a3c',alpha:90},
-  mono:{name:'Mono',panel:'#121214',btn:'#2a2a2e',accent:'#f2f2f2',alpha:92},
-  pink:{name:'Neon Pink',panel:'#1a0f1c',btn:'#3a1d3e',accent:'#ff5fd2',alpha:88}};
+  gold:{name:'CR3W Gold',btn:'#2a2b33',accent:'#f2c14e',alpha:92},
+  ice:{name:'Ice',btn:'#1d3247',accent:'#5fd3ff',alpha:92},
+  violet:{name:'Violet',btn:'#2c2350',accent:'#a98bff',alpha:92},
+  emerald:{name:'Emerald',btn:'#1c3a30',accent:'#2fe0a0',alpha:92},
+  crimson:{name:'Crimson',btn:'#3a1c24',accent:'#ff5a6e',alpha:92},
+  sunset:{name:'Sunset',btn:'#3d2618',accent:'#ff9a3c',alpha:92},
+  mono:{name:'Mono',btn:'#2a2a2e',accent:'#f2f2f2',alpha:92},
+  pink:{name:'Neon Pink',btn:'#3a1d3e',accent:'#ff5fd2',alpha:92}};
 const hexRgb=h=>{h=h.replace('#','');return [0,2,4].map(i=>parseInt(h.substr(i,2),16))};
 const mixHex=(h,t,k)=>{const a=hexRgb(h),b=hexRgb(t);return '#'+a.map((v,i)=>Math.round(v+(b[i]-v)*k).toString(16).padStart(2,'0')).join('')};
 let THEME=Object.assign({},THEMES.gold);
 try{const saved=JSON.parse(localStorage.getItem('cr3w-theme')||'null');if(saved&&saved.accent)THEME=Object.assign(THEME,saved)}catch{}
-function applyTheme(t){const r=document.documentElement.style,[pr,pg,pb]=hexRgb(t.panel),a=t.alpha/100,[ar,ag,ab]=hexRgb(t.accent),[br,bg,bb]=hexRgb(t.btn);
+function applyTheme(t){t.panel=PANEL_BLACK;const r=document.documentElement.style,[pr,pg,pb]=hexRgb(t.panel),a=t.alpha/100,[ar,ag,ab]=hexRgb(t.accent),[br,bg,bb]=hexRgb(t.btn);
   const dk=hexRgb(mixHex(t.panel,'#000000',.45));
   r.setProperty('--panel-a',`rgba(${pr},${pg},${pb},${a})`);r.setProperty('--panel-b',`rgba(${dk[0]},${dk[1]},${dk[2]},${Math.max(.5,a-.04)})`);
   r.setProperty('--glass',`rgba(${dk[0]},${dk[1]},${dk[2]},${Math.max(.55,a-.14)})`);r.setProperty('--glass-2',`rgba(${pr},${pg},${pb},${a})`);
   r.setProperty('--btn-bg',`rgba(${br},${bg},${bb},.85)`);r.setProperty('--btn-hover',`rgba(${hexRgb(mixHex(t.btn,'#ffffff',.12)).join(',')},.95)`);
   r.setProperty('--gold',t.accent);r.setProperty('--gold-2',mixHex(t.accent,'#ffffff',.35));r.setProperty('--accent-rgb',`${ar},${ag},${ab}`);
   r.setProperty('--on-accent',(ar*.299+ag*.587+ab*.114)>150?'#141108':'#ffffff');
-  document.querySelector('meta[name=theme-color]').setAttribute('content',t.panel)}
+  document.querySelector('meta[name=theme-color]').setAttribute('content','#000000')}
 applyTheme(THEME);
 function saveTheme(){try{localStorage.setItem('cr3w-theme',JSON.stringify(THEME))}catch{}applyTheme(THEME);syncTheme()}
-function syncTheme(){document.getElementById('c-panel').value=THEME.panel;document.getElementById('c-btn').value=THEME.btn;document.getElementById('c-accent').value=THEME.accent;document.getElementById('c-alpha').value=THEME.alpha;
-  document.querySelectorAll('.sw').forEach(b=>{const p=THEMES[b.dataset.t];b.classList.toggle('on',p.panel===THEME.panel&&p.accent===THEME.accent&&p.btn===THEME.btn)})}
+function syncTheme(){document.getElementById('c-btn').value=THEME.btn;document.getElementById('c-accent').value=THEME.accent;document.getElementById('c-alpha').value=THEME.alpha;
+  document.querySelectorAll('.sw').forEach(b=>{const p=THEMES[b.dataset.t];b.classList.toggle('on',p.accent===THEME.accent&&p.btn===THEME.btn)})}
 (()=>{const box=document.getElementById('theme'),gear=document.getElementById('gear');
-  document.getElementById('swatches').innerHTML=Object.entries(THEMES).map(([k,t])=>`<button class="sw" type="button" data-t="${k}"><i style="background:linear-gradient(135deg,${t.panel} 0 50%,${t.accent} 50%)"></i>${t.name}</button>`).join('');
+  document.getElementById('swatches').innerHTML=Object.entries(THEMES).map(([k,t])=>`<button class="sw" type="button" data-t="${k}"><i style="background:linear-gradient(135deg,${t.btn} 0 50%,${t.accent} 50%)"></i>${t.name}</button>`).join('');
   const toggle=open=>{box.hidden=!open;gear.setAttribute('aria-expanded',open);if(open)syncTheme()};
   gear.addEventListener('click',()=>toggle(box.hidden));
   document.getElementById('theme-close').addEventListener('click',()=>toggle(false));
   box.addEventListener('click',e=>{const b=e.target.closest('.sw');if(b){THEME=Object.assign({},THEMES[b.dataset.t]);saveTheme()}});
-  [['c-panel','panel'],['c-btn','btn'],['c-accent','accent']].forEach(([id,k])=>document.getElementById(id).addEventListener('input',e=>{THEME[k]=e.target.value;saveTheme()}));
+  [['c-btn','btn'],['c-accent','accent']].forEach(([id,k])=>document.getElementById(id).addEventListener('input',e=>{THEME[k]=e.target.value;saveTheme()}));
   document.getElementById('c-alpha').addEventListener('input',e=>{THEME.alpha=+e.target.value;saveTheme()});
   document.getElementById('c-reset').addEventListener('click',()=>{THEME=Object.assign({},THEMES.gold);saveTheme()});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!box.hidden)toggle(false)});
