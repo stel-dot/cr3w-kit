@@ -322,6 +322,61 @@ def highlight_score(wav, dur, words):
     return round(100 * (.4 * burst + .3 * wps + .15 * active + .15 * level))
 
 
+# Fill-in hooks the scouts use when a clip has no real title. When the hook is one of these,
+# the editor swaps it for the loudest thing actually said in the clip, so the title matches the video.
+TEMPLATE_HOOK = re.compile(r"couldn't believe what happened|lost it on stream|was not ready for this|could not stop laughing|moment went crazy|whole stream in tears|said what on stream", re.I)
+FILLER = {'yeah', 'yes', 'no', 'bro', 'okay', 'ok', 'uh', 'um', 'like', 'so', 'and', 'the', 'what', 'oh', 'huh', 'hey', 'yo', 'man', 'dude'}
+
+
+def speech_hook(words, wav, streamer):
+    """Picks the punchiest line actually spoken in the clip (loud, short, complete) to use as the on-screen hook."""
+    import wave, numpy as np
+    if len(words) < 3:
+        return None
+    try:
+        with wave.open(wav, 'rb') as f:
+            sr = f.getframerate()
+            x = np.frombuffer(f.readframes(f.getnframes()), dtype=np.int16).astype(np.float32) / 32768.0
+    except Exception:
+        return None
+    def loud(a, b):
+        seg = x[int(a * sr):int(b * sr)]
+        return float(np.sqrt(np.mean(seg ** 2))) if len(seg) else 0.0
+    base = loud(0, len(x) / sr) + 1e-6
+    phrases, cur = [], []
+    for i, w in enumerate(words):
+        if cur and (w['s'] - cur[-1]['e'] > .45 or re.search(r'[.!?]$', cur[-1]['t'])):
+            phrases.append(cur); cur = []
+        cur.append(w)
+    if cur:
+        phrases.append(cur)
+    best, best_score = None, 0
+    for ph in phrases:
+        for k in range(len(ph)):                       # windows of 3-9 words inside each phrase
+            for n in range(3, 10):
+                win = ph[k:k + n]
+                if len(win) < 3 or (k + n > len(ph) and n > len(ph)):
+                    continue
+                text = ' '.join(w['t'] for w in win).strip()
+                plain = [re.sub(r"[^a-z']", '', w['t'].lower()) for w in win]
+                content = [p for p in plain if p and p not in FILLER]
+                if len(content) < 2 or len(text) > 42:
+                    continue
+                if len(set(plain)) < len(plain) * .6:  # "no no no no"
+                    continue
+                sc = loud(win[0]['s'], win[-1]['e']) / base
+                sc *= 1 + .15 * min(len(content), 5)
+                if re.search(r'[!?]', text) or '*' in text:
+                    sc *= 1.25
+                if sc > best_score:
+                    best, best_score = text, sc
+    if not best or best_score < 1.15:
+        return None
+    best = re.sub(r'^[^\w*]+|[,;:]+$', '', best).strip()
+    first = (streamer or '').split(' ')[0] or 'Bro'
+    return f'{first}: "{best.upper()}"'
+
+
 def hype_moments(wav, dur, seed, cuts=()):
     """Finds the loudest burst in the clip (yelling, crash-outs) for a meme sound + action caption."""
     import random, wave, numpy as np
@@ -470,7 +525,13 @@ def render_short(job):
         fg_h, fg_y = 1290, 590
         fg = f'scale={W}:-2,crop={W}:min(ih\\,{fg_h})'
         cap_y = fg_y + fg_h - 230
-    make_title(job.get('hook') or hook_from(job.get('title'), job.get('streamer')), f'{work}/title.png', title_h)
+    hook = job.get('hook') or hook_from(job.get('title'), job.get('streamer'))
+    new_hook = None
+    if job.get('speech_hook', True) and words and (not job.get('hook') or TEMPLATE_HOOK.search(hook)):
+        new_hook = speech_hook(words, f'{work}/a.wav', job.get('streamer'))
+        if new_hook:
+            hook = new_hook
+    make_title(hook, f'{work}/title.png', title_h)
     make_ass(words, f'{work}/cap.ass', cap_y, replays, fg_y + 70, hype)
     fc = (f'[0:v]fps=30,split[a][b];'
           f'[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},hflip,gblur=sigma=30,eq=brightness=-0.10:saturation=1.15[bg];'
@@ -502,7 +563,7 @@ def render_short(job):
     shutil.rmtree(work, ignore_errors=True)
     return {'ok': True, 'id': jid, 'file': os.path.basename(out), 'url': f'{PUBLIC}/clips/{os.path.basename(out)}',
             'duration': round(dur, 1), 'captions': len(words), 'size_mb': round(os.path.getsize(out) / 1e6, 1), 'replays': len(replays), 'cleaned': len(cuts), 'hype': [h[2] for h in hype],
-            'highlight': score, 'caption_error': job.get('caption_error')}
+            'highlight': score, 'caption_error': job.get('caption_error'), 'hook': hook, 'hook_from_speech': bool(new_hook)}
 
 
 @app.post('/render')
