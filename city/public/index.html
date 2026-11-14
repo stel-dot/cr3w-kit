@@ -1217,9 +1217,9 @@ function renderPanel(){
       <div class="stats"><div class="stat wide"><span>Schedule</span><b>${esc(bot.schedule)}</b></div>
         <div class="stat"><span>Today</span><b>${esc(bot.today)}</b></div><div class="stat"><span>Last run</span><b>${esc(bot.last)}</b></div></div>
       ${bot.err?`<div class="err">${esc(bot.err)}</div>`:''}
-      ${bot.name==='Clip Editor'?`<div class="studio" id="studio" data-bot="${esc(bot.id)}"><div class="s-empty">Loading Shorts…</div></div>`:''}
+      ${/^Clip Editor/.test(bot.name)?`<div class="studio" id="studio" data-bot="${esc(bot.id)}"><div class="s-empty">Loading Shorts…</div></div>`:''}
       <div class="p-actions">${botActions(bot)}<button class="btn" data-back="1">Back to office</button></div></div>`;
-    document.body.classList.toggle('reviewing',bot.name==='Clip Editor');
+    document.body.classList.toggle('reviewing',/^Clip Editor/.test(bot.name));
     const fresh=document.getElementById('studio');
     if(fresh){if(keep&&keep.dataset.bot===fresh.dataset.bot)fresh.replaceWith(keep);else loadStudio()}
     return}

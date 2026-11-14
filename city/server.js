@@ -76,7 +76,8 @@ const BOT_INFO = {
   'Review Requester': { biz: 'cr3w', job: 'Sends the thank-you survey after delivery', kind: 'auto', schedule: 'Daily 10:00 AM' },
   'Review Survey': { biz: 'cr3w', job: 'The survey page customers fill out', kind: 'auto', schedule: 'Always on (survey page)' },
   'Clip Scout': { biz: 'youtube', job: 'Finds the best stream moments from your 7 streamers', kind: 'auto', schedule: 'Every 6 hours' },
-  'Clip Editor': { biz: 'youtube', job: 'Turns top moments into Shorts and sends them to you', kind: 'auto', schedule: 'Every 2 hours, 8 AM to 10 PM' },
+  'Clip Editor': { biz: 'youtube', job: 'Turns top moments into Shorts and sends them to you', kind: 'auto', schedule: 'Even hours, 8 AM to 10 PM' },
+  'Clip Editor 2': { biz: 'youtube', job: 'Second editor: makes Shorts on the hours in between', kind: 'auto', schedule: 'Odd hours, 9 AM to 9 PM' },
   'Studio Inbox': { biz: 'youtube', job: 'Handles your Approve / Decline / Posted choices', kind: 'auto', schedule: 'Always on (email buttons)' },
   'Compilation Builder': { biz: 'youtube', job: 'Builds the weekly 4 to 10 minute compilation', kind: 'auto', schedule: 'Sundays 5:00 PM' },
   'Gatekeeper': { biz: 'cr3w', job: 'Emails you when someone gets locked out for guessing your City password', kind: 'auto', schedule: 'Checks every 5 min' }

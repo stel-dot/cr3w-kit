@@ -297,6 +297,28 @@ def censor(words, seed):
     return [(a, b, 'thud' if rnd.random() < .5 else None) for a, b in merged]
 
 
+def highlight_score(wav, dur, words):
+    """0-100: how lively a clip is. Loud bursts (yelling, laughing, chaos) and fast talking score high;
+    quiet, slow or silent clips score low."""
+    import wave, numpy as np
+    try:
+        with wave.open(wav, 'rb') as f:
+            sr = f.getframerate()
+            x = np.frombuffer(f.readframes(f.getnframes()), dtype=np.int16).astype(np.float32) / 32768.0
+    except Exception:
+        return None
+    hop = int(sr * .25)
+    if len(x) < hop * 8:
+        return None
+    rms = np.array([np.sqrt(np.mean(x[i:i + hop] ** 2) + 1e-9) for i in range(0, len(x) - hop, hop)])
+    med, p95 = float(np.median(rms)), float(np.percentile(rms, 95))
+    burst = min(1.0, max(0.0, (p95 / (med + 1e-6) - 1.3) / 1.7))      # how much the loud parts stand out
+    active = float(np.mean(rms > max(.012, med * .5)))                # share of the clip with sound going on
+    wps = min(1.0, (len(words) / max(dur, 1)) / 2.6)                  # talking speed
+    level = min(1.0, med / .06)                                       # overall loudness
+    return round(100 * (.4 * burst + .3 * wps + .15 * active + .15 * level))
+
+
 def hype_moments(wav, dur, seed, cuts=()):
     """Finds the loudest burst in the clip (yelling, crash-outs) for a meme sound + action caption."""
     import random, wave, numpy as np
@@ -427,6 +449,10 @@ def render_short(job):
         except Exception as e:
             words = []
             job['caption_error'] = str(e)[:200]
+    score = highlight_score(f'{work}/a.wav', info['dur'], words) if info['audio'] else None
+    gate = float(job.get('min_highlight') or 0)
+    if gate and score is not None and score < gate:
+        raise Exception(f'Not a highlight: too quiet or slow (liveliness {score}/100, needs {int(gate)})')
     # Turned on for every Short once the file /data/clean_on exists (or per job with clean: true)
     clean = job.get('clean', os.path.exists(f'{DATA}/clean_on'))
     cuts = censor(words, jid) if clean else []
@@ -473,7 +499,7 @@ def render_short(job):
     shutil.rmtree(work, ignore_errors=True)
     return {'ok': True, 'id': jid, 'file': os.path.basename(out), 'url': f'{PUBLIC}/clips/{os.path.basename(out)}',
             'duration': round(dur, 1), 'captions': len(words), 'size_mb': round(os.path.getsize(out) / 1e6, 1), 'replays': len(replays), 'cleaned': len(cuts), 'hype': [h[2] for h in hype],
-            'caption_error': job.get('caption_error')}
+            'highlight': score, 'caption_error': job.get('caption_error')}
 
 
 @app.post('/render')
@@ -571,7 +597,7 @@ def clip_file(name):
 def health():
     du = shutil.disk_usage(DATA)
     return jsonify({'ok': True, 'clips': len(os.listdir(CLIPS)), 'free_gb': round(du.free / 1e9, 1),
-                    'cookies': os.path.exists(f'{DATA}/cookies.txt'), 'replay': True})
+                    'cookies': os.path.exists(f'{DATA}/cookies.txt'), 'replay': True, 'highlight': True})
 
 
 def cleanup_loop():
