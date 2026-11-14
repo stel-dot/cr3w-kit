@@ -856,37 +856,47 @@ const DESKTOP=(()=>{const t=ctex(512,256,(g,w,h)=>{g.fillStyle='#f4f1ea';g.fillR
 const KEYS=(()=>{const t=ctex(256,96,(g,w,h)=>{g.fillStyle='#14161f';g.fillRect(0,0,w,h);g.fillStyle='#2c3040';
   for(let r=0;r<4;r++)for(let c=0;c<14;c++)rr(g,6+c*17.5,6+r*21,15,17,3),g.fill();g.fillStyle='#3a3f55';rr(g,60,70,120,18,3);g.fill()});t.userData.keep=true;return t})();
 const deskTopMat=new THREE.MeshStandardMaterial({map:DESKTOP,roughness:.42,metalness:.05,envMap:ENV,envMapIntensity:.6});deskTopMat.userData.shared=true;
-// black marble: flowing white vein bands, wispy offshoots and cloudy patches, computed per pixel (tiles seamlessly)
-function marbleTex(size,tiles,seedOff){let sd=9001+seedOff*7919;const r=()=>(sd=sd*16807%2147483647)/2147483647;
+// marble, computed per pixel and seamless when repeated.
+// kind 'slab': near-black marble with a few thin white hairline veins, laid as large rectangular slabs; 'dark': the same stone without joints;
+// 'hex': the same stone as hexagon tiles with pale grout; 'light': cream marble with dark veins
+function marbleTex(size,kind,seedOff){let sd=9001+seedOff*7919;const r=()=>(sd=sd*16807%2147483647)/2147483647;
   const L=64,lat=new Float32Array(L*L);for(let i=0;i<L*L;i++)lat[i]=r();
   const n=(x,y,per,o)=>{const xi=Math.floor(x),yi=Math.floor(y);let fx=x-xi,fy=y-yi;fx=fx*fx*(3-2*fx);fy=fy*fy*(3-2*fy);
     const x0=((xi%per)+per)%per,x1=(x0+1)%per,y0=((yi%per)+per)%per,y1=(y0+1)%per,N=L*L;
     const a=lat[(y0*L+x0+o)%N],b2=lat[(y0*L+x1+o)%N],c=lat[(y1*L+x0+o)%N],d=lat[(y1*L+x1+o)%N];
     return a+(b2-a)*fx+(c-a)*fy+(a-b2-c+d)*fx*fy};
   const fbm=(u,v,o,f0)=>{let t=0,am=.5,f=f0;for(let k=0;k<4;k++){t+=am*n(u*f,v*f,f,o+k*131);am*=.5;f*=2}return t/.9375};
-  const cl=x=>x<0?0:x>1?1:x;
-  return ctex(size,size,(g,w,h)=>{const img=g.createImageData(w,h),D=img.data,PI=Math.PI;
-    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const u=x/w,v=y/h;
+  const cl=x=>x<0?0:x>1?1:x,hex=kind==='hex',dark=kind!=='light',COLS=8,ROWS=7;
+  const offs=[];for(let i=0;i<COLS*ROWS*2;i++)offs.push(Math.floor(r()*4)/4+0); // per-tile shifts (quarter steps keep it seamless)
+  return ctex(size,size,(g,w,h)=>{const img=g.createImageData(w,h),D=img.data,PI=Math.PI,rad=w/12,hh=h/14;
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){let u=x/w,v=y/h,edge=1;
+      if(hex){ // which hexagon is this pixel in? (nearest centre) -> shift the pattern per tile so veins break at the grout
+        const ci=Math.floor(x/(1.5*rad));let best=1e9,bi=0,bj=0,second=1e9;
+        for(let i=ci-1;i<=ci+2;i++){const oy=(i&1)?hh:0,cj=Math.round((y-oy)/(2*hh));
+          for(let j=cj-1;j<=cj+1;j++){const dx=(x-i*1.5*rad)/rad,dy=(y-(j*2*hh+oy))/(hh*1.1547),d=dx*dx+dy*dy;
+            if(d<best){second=best;best=d;bi=i;bj=j}else if(d<second)second=d}}
+        edge=Math.sqrt(second)-Math.sqrt(best);
+        const id=(((bi%COLS)+COLS)%COLS)+(((bj%ROWS)+ROWS)%ROWS)*COLS;u+=offs[id];v+=offs[id+COLS*ROWS]}
       const w1=fbm(u,v,0,2),w2=fbm(u,v,977,4),w3=fbm(u,v,2311,8);
-      // broad vein bands running on the diagonal, pushed around by the noise
       const t1=(2*u+3*v)+(w1-.5)*2.6+(w3-.5)*.25,s1=Math.abs(Math.sin(PI*t1));
-      const mask1=cl((w2-.38)*3.2);
-      const main=Math.pow(1-s1,7)*mask1,halo=Math.pow(1-s1,2.6)*mask1*.24;
-      // thinner veins following the same flow
       const t2=(4*u+6*v)+(w2-.5)*3.4,s2=Math.abs(Math.sin(PI*t2));
-      const sec=Math.pow(1-s2,14)*cl((w1-.42)*3.5)*.8;
-      // hairline network
       const rg=1-Math.abs(2*fbm(u+(w1-.5)*.12,v+(w2-.5)*.12,4441,8)-1);
-      const fine=Math.pow(rg,18)*.55;
-      const white=cl(main+halo+sec+fine);
-      const base=9+w2*20+w3*8;
-      const val=base+(238-base)*white,i=(y*w+x)*4;
-      D[i]=val;D[i+1]=val*.985;D[i+2]=val*.96+base*.06;D[i+3]=255}
+      const i4=(y*w+x)*4;let R,G,B;
+      if(dark){ // sparse, thin, crisp veins on near-black
+        const vein=cl(Math.pow(1-s1,34)*cl((w2-.5)*5)+Math.pow(1-s2,46)*cl((w1-.5)*5)*.8+Math.pow(rg,40)*cl((w3-.45)*4)*.6);
+        const base=5+w2*7+w3*3,val=base+(225-base)*vein;R=val;G=val*.985;B=val*.97;
+        if(edge<.035){const k=1-edge/.035;R+=(150-R)*k*.75;G+=(150-G)*k*.75;B+=(148-B)*k*.75}}
+      else{ // cream stone with bold dark veins and soft grey clouding
+        const m1=cl((w2-.36)*3),vein=cl(Math.pow(1-s1,9)*m1+Math.pow(1-s2,18)*cl((w1-.42)*3.5)*.7+Math.pow(rg,22)*.45);
+        const cloud=Math.pow(1-s1,2.4)*m1*.3+(w3-.5)*.12;
+        const br=1-cl(cloud);R=(238*br)*(1-vein)+62*vein;G=(232*br)*(1-vein)+54*vein;B=(222*br)*(1-vein)+48*vein}
+      D[i4]=R;D[i4+1]=G;D[i4+2]=B;D[i4+3]=255}
     g.putImageData(img,0,0);
-    if(tiles){g.strokeStyle='rgba(0,0,0,.6)';g.lineWidth=Math.max(1.5,w/600);const st=w/tiles;
-      for(let i=0;i<=tiles;i++){g.beginPath();g.moveTo(i*st,0);g.lineTo(i*st,h);g.stroke();g.beginPath();g.moveTo(0,i*st);g.lineTo(w,i*st);g.stroke()}}})}
+    if(kind==='slab'){const cols=5,rows=8;g.strokeStyle='rgba(58,60,66,.6)';g.lineWidth=Math.max(1,w/900);
+      for(let i=0;i<=cols;i++){g.beginPath();g.moveTo(i*w/cols,0);g.lineTo(i*w/cols,h);g.stroke()}
+      for(let j=0;j<=rows;j++){g.beginPath();g.moveTo(0,j*h/rows);g.lineTo(w,j*h/rows);g.stroke()}}})}
 function makeDesk(accent,lux){const d=new THREE.Group();
-  if(lux&&!O.deskMarble){O.deskMarble=new THREE.MeshStandardMaterial({color:0x9a9a9a,map:marbleTex(256,0,7),roughness:.12,metalness:0,envMap:ENV_WARM,envMapIntensity:1.3});O.deskMarble.userData.shared=true;O.deskMarble.map.userData.keep=true}
+  if(lux&&!O.deskMarble){O.deskMarble=new THREE.MeshStandardMaterial({color:0xc4c4c4,map:marbleTex(256,'dark',7),roughness:.12,metalness:0,envMap:ENV_WARM,envMapIntensity:1.3});O.deskMarble.userData.shared=true;O.deskMarble.map.userData.keep=true}
   const top=mesh(rbox(2.15,.06,.92,.28),lux?O.deskMarble:deskTopMat);top.position.y=.74;d.add(top);
   const edge=new THREE.Mesh(new THREE.BoxGeometry(1.9,.015,.02),glow(lux?0xf0b860:accent));edge.position.set(0,.77,.47);d.add(edge);
   [-.9,.9].forEach(x=>{const l=mesh(rbox(.06,.74,.8,.02),M.pearl);l.position.set(x,0,0);d.add(l)});
@@ -924,8 +934,8 @@ function buildOffice(b){
       for(let i=0;i<9000;i++){const v=rnd();g.fillStyle=rough?`rgba(${v*255|0},${v*255|0},${v*255|0},.08)`:`rgba(${30+v*30|0},${33+v*30|0},${50+v*30|0},.25)`;const r=1+rnd()*6;g.fillRect(rnd()*w,rnd()*h,r,r)}
       g.strokeStyle=rough?'#c8c8c8':'rgba(0,0,0,.55)';g.lineWidth=3;for(let i=0;i<=w;i+=128){g.beginPath();g.moveTo(i,0);g.lineTo(i,h);g.stroke();g.beginPath();g.moveTo(0,i);g.lineTo(w,i);g.stroke()}});
     const c=slab(false),r=slab(true);r.encoding=THREE.LinearEncoding;[c,r].forEach(t=>{t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(3.5,3.5);t.anisotropy=8;t.userData.keep=true});O.floorTex={c,r}}
-  if(cr&&!O.marbleFloor){O.marbleFloor=marbleTex(1024,2,1);O.marbleFloor.wrapS=O.marbleFloor.wrapT=THREE.RepeatWrapping;O.marbleFloor.repeat.set(2.5,2.5);O.marbleFloor.anisotropy=8;O.marbleFloor.userData.keep=true}
-  const floor=cr?mesh(new THREE.CircleGeometry(15,96),new THREE.MeshStandardMaterial({color:0x7c7c7c,map:O.marbleFloor,roughness:.2,metalness:0,envMap:ENV_WARM,envMapIntensity:1}))
+  if(cr&&!O.marbleFloor){O.marbleFloor=marbleTex(1024,'slab',1);O.marbleFloor.wrapS=O.marbleFloor.wrapT=THREE.RepeatWrapping;O.marbleFloor.repeat.set(3,3);O.marbleFloor.anisotropy=8;O.marbleFloor.userData.keep=true}
+  const floor=cr?mesh(new THREE.CircleGeometry(15,96),new THREE.MeshStandardMaterial({color:0x808080,map:O.marbleFloor,roughness:.15,metalness:0,envMap:ENV_WARM,envMapIntensity:1.2}))
     :mesh(new THREE.CircleGeometry(15,96),new THREE.MeshStandardMaterial({color:0xffffff,map:O.floorTex.c,roughnessMap:O.floorTex.r,metalness:.5,roughness:.5,envMap:ENV,envMapIntensity:1}));
   floor.material.userData.shared=true;floor.rotation.x=-Math.PI/2;s.add(floor);
   if(!O.rugTex){O.rugTex=ctex(512,512,(g,w,h)=>{g.fillStyle='#1b2036';g.fillRect(0,0,w,h);for(let i=0;i<26000;i++){const v=rnd();g.fillStyle=v<.5?'rgba(40,46,80,.5)':'rgba(14,16,30,.5)';g.fillRect(rnd()*w,rnd()*h,1,2)}
@@ -938,12 +948,12 @@ function buildOffice(b){
     [-1,1].forEach(k=>{const w=mesh(new THREE.CylinderGeometry(.006,.006,1.2,4),M.metal,false);w.position.set(x+k*.6,6.35,z);s.add(w)})});
   // lounge corner: sofa, coffee table, floor lamp
   const lounge=new THREE.Group();lounge.position.set(7.2,0,-.6);lounge.rotation.y=-1.25;s.add(lounge);
-  const sofaM=new THREE.MeshStandardMaterial({color:cr?0x121216:0x2a2350,roughness:cr?.35:.85,metalness:cr?.1:0,envMap:ENV,envMapIntensity:cr?.6:0});
+  const sofaM=new THREE.MeshStandardMaterial({color:cr?0xa39c90:0x2a2350,roughness:.85});
   const base=mesh(rbox(2.4,.38,.9,.2),sofaM);lounge.add(base);
   const backr=mesh(rbox(2.4,.5,.22,.1),sofaM);backr.position.set(0,.36,-.36);lounge.add(backr);
   [-1,1].forEach(k=>{const arm=mesh(rbox(.2,.58,.9,.08),sofaM);arm.position.set(k*1.2,0,0);lounge.add(arm)});
-  [-.55,.55].forEach(x=>{const cu=mesh(rbox(1.05,.12,.7,.15),new THREE.MeshStandardMaterial({color:cr?0x1a1a20:0x3a3170,roughness:cr?.4:.8}));cu.position.set(x,.38,.05);lounge.add(cu)});
-  if(cr){const pil=mesh(rbox(.32,.3,.1,.05),new THREE.MeshStandardMaterial({color:0xf2c14e,roughness:.7}));pil.position.set(-.3,.48,-.2);pil.rotation.x=-.2;lounge.add(pil)}
+  [-.55,.55].forEach(x=>{const cu=mesh(rbox(1.05,.12,.7,.15),new THREE.MeshStandardMaterial({color:cr?0xb0a99d:0x3a3170,roughness:.8}));cu.position.set(x,.38,.05);lounge.add(cu)});
+  if(cr){const pil=mesh(rbox(.32,.3,.1,.05),new THREE.MeshStandardMaterial({color:0x9a4a22,roughness:.7}));pil.position.set(-.3,.48,-.2);pil.rotation.x=-.2;lounge.add(pil)}
   const ct=mesh(new THREE.CylinderGeometry(.42,.42,.04,32),M.shell);ct.position.set(0,.4,1.05);lounge.add(ct);
   const cl=mesh(new THREE.CylinderGeometry(.05,.08,.4,10),M.metal);cl.position.set(0,.2,1.05);lounge.add(cl);
   const fl=mesh(new THREE.CylinderGeometry(.015,.015,1.7,8),M.metal);fl.position.set(1.55,.85,-.3);lounge.add(fl);
@@ -957,18 +967,23 @@ function buildOffice(b){
   // parametric wood ceiling ribbons with light coves
   const ceil=new THREE.Group();ceil.position.z=-1.5;s.add(ceil);
   if(cr){
-    // dark ceiling slab with angular gold light lines
-    const slab=new THREE.Mesh(new THREE.CircleGeometry(14,64),new THREE.MeshStandardMaterial({color:0x0c0c10,roughness:.7,side:THREE.DoubleSide}));slab.rotation.x=Math.PI/2;slab.position.set(0,6.9,1.5);ceil.add(slab);
-    const pts=[[-11,-6],[-6,-8],[0,-7],[6,-9],[11,-5],[-12,0],[-5,-2],[2,-1],[8,0],[12,1],[-10,5],[-3,4],[4,6],[10,6]];
-    const links=[[0,1],[1,2],[2,3],[3,4],[0,6],[1,6],[2,7],[3,8],[4,9],[5,6],[6,7],[7,8],[8,9],[5,10],[6,11],[7,11],[7,12],[8,12],[8,13],[9,13],[10,11],[11,12],[12,13]];
-    const goldL=glow(0xff9a1f);
-    links.forEach(([i,j])=>{const [x1,z1]=pts[i],[x2,z2]=pts[j],L=Math.hypot(x2-x1,z2-z1);
-      const bar=new THREE.Mesh(new THREE.BoxGeometry(L,.02,.035),goldL);bar.position.set((x1+x2)/2,6.87,(z1+z2)/2);bar.rotation.y=-Math.atan2(z2-z1,x2-x1);ceil.add(bar)});
-    // black marble feature walls on both sides of the big screen
-    if(!O.marbleWall){O.marbleWall=marbleTex(512,0,3);O.marbleWall.wrapS=O.marbleWall.wrapT=THREE.RepeatWrapping;O.marbleWall.repeat.set(2,1);O.marbleWall.userData.keep=true}
-    const mw=new THREE.MeshStandardMaterial({color:0x8a8a8a,map:O.marbleWall,roughness:.12,metalness:0,side:THREE.DoubleSide,envMap:ENV_WARM,envMapIntensity:1.3});
-    [[Math.PI*.5,Math.PI*.31],[Math.PI*1.19,Math.PI*.31]].forEach(([st,len])=>{const wl=mesh(new THREE.CylinderGeometry(13.2,13.2,6.9,64,1,true,st,len),mw,false);wl.position.y=3.45;s.add(wl);
-      const ul=new THREE.Mesh(new THREE.CylinderGeometry(13.15,13.15,.03,64,1,true,st,len),glow(0xffc46b));ul.position.y=.05;s.add(ul)});
+    // cream ceiling with a recessed panel, warm cove light and a walnut trim band
+    const cm=c=>new THREE.MeshStandardMaterial({color:c,roughness:.8,side:THREE.DoubleSide});
+    const slab=new THREE.Mesh(new THREE.CircleGeometry(14,64),cm(0x8f877a));slab.rotation.x=Math.PI/2;slab.position.set(0,6.9,1.5);ceil.add(slab);
+    const inner=new THREE.Mesh(new THREE.CircleGeometry(1,64),cm(0xa39a8b));inner.scale.set(9,6,1);inner.rotation.x=Math.PI/2;inner.position.set(0,7.25,1.5);ceil.add(inner);
+    const riser=new THREE.Mesh(new THREE.CylinderGeometry(1,1,.36,96,1,true),cm(0x9a9183));riser.scale.set(9,1,6);riser.position.set(0,7.07,1.5);ceil.add(riser);
+    const cove=new THREE.Mesh(new THREE.TorusGeometry(1,.006,6,160),glow(0xffd9a0));cove.scale.set(8.9,5.9,8);cove.rotation.x=Math.PI/2;cove.position.set(0,7.2,1.5);ceil.add(cove);
+    const walnut=new THREE.MeshStandardMaterial({color:0x5a3520,roughness:.5,envMap:ENV_WARM,envMapIntensity:.4});
+    const trim=new THREE.Mesh(new THREE.TorusGeometry(1,.012,6,160),walnut);trim.scale.set(9.25,6.25,6);trim.rotation.x=Math.PI/2;trim.position.set(0,6.88,1.5);ceil.add(trim);
+    const line=new THREE.Mesh(new THREE.TorusGeometry(1,.003,4,160),glow(0xfff1d6));line.scale.set(11.5,8.2,8);line.rotation.x=Math.PI/2;line.position.set(0,6.87,1.5);ceil.add(line);
+    // cream marble feature walls with walnut slat panels beside the big screen
+    if(!O.marbleWall){O.marbleWall=marbleTex(512,'light',3);O.marbleWall.wrapS=O.marbleWall.wrapT=THREE.RepeatWrapping;O.marbleWall.repeat.set(2,1);O.marbleWall.userData.keep=true}
+    if(!O.slatTex){O.slatTex=ctex(256,64,(g,w,h)=>{for(let x=0;x<w;x+=16){const v=rnd();g.fillStyle=`rgb(${96+v*26|0},${58+v*16|0},${34+v*10|0})`;g.fillRect(x,0,13,h);g.fillStyle='#1a0f08';g.fillRect(x+13,0,3,h)}});O.slatTex.wrapS=THREE.RepeatWrapping;O.slatTex.repeat.set(3,1);O.slatTex.userData.keep=true}
+    const mw=new THREE.MeshStandardMaterial({color:0xa9a195,map:O.marbleWall,roughness:.2,metalness:0,side:THREE.DoubleSide,envMap:ENV_WARM,envMapIntensity:.8});
+    const sw=new THREE.MeshStandardMaterial({color:0xb0b0b0,map:O.slatTex,roughness:.5,side:THREE.DoubleSide,envMap:ENV_WARM,envMapIntensity:.4});
+    [[Math.PI*.5,Math.PI*.31,Math.PI*.735],[Math.PI*1.19,Math.PI*.31,Math.PI*1.19]].forEach(([st,len,ws])=>{const wl=mesh(new THREE.CylinderGeometry(13.2,13.2,6.9,64,1,true,st,len),mw,false);wl.position.y=3.45;s.add(wl);
+      const wd=mesh(new THREE.CylinderGeometry(13.1,13.1,6.9,24,1,true,ws,Math.PI*.075),sw,false);wd.position.y=3.45;s.add(wd);
+      const ul=new THREE.Mesh(new THREE.CylinderGeometry(13.15,13.15,.03,64,1,true,st,len),glow(0xffd9a0));ul.position.y=.05;s.add(ul)});
     // lounge rug
     const lrug=mesh(rbox(4.2,.015,3.4,.3),new THREE.MeshStandardMaterial({color:0x8d8f96,roughness:.95}));lrug.position.set(7.0,0,-.3);lrug.rotation.y=-1.25;s.add(lrug)}
   else for(let i=0;i<5;i++){const r=8.4+i*1.05,arc=Math.PI*(1.05-i*.06);const hold=new THREE.Group();hold.rotation.y=(Math.PI-arc)/2-Math.PI+.0;hold.position.y=6.6+i*.22+Math.sin(i*1.7)*.18;ceil.add(hold);
