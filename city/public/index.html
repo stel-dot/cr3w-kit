@@ -243,6 +243,13 @@ body.office .feed{display:none}
   .btn{min-height:42px}
   .desk-body{grid-template-columns:1fr 1fr}
   .desk-body>div:first-child{grid-column:1/-1}
+  /* phone: swipe sideways through the bots, one card at a time */
+  body.office:not(.focus) .panel{max-height:56%}
+  .desks{flex-direction:row;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;gap:12px;padding:2px 18px 16px;scroll-padding-left:18px;-webkit-overflow-scrolling:touch;scrollbar-width:none;align-items:stretch}
+  .desks::-webkit-scrollbar{display:none}
+  .desk{width:min(80vw,330px);scroll-snap-align:start}
+  .desk:hover{transform:none}
+  .floor-label span::after{content:" · swipe →";color:var(--gold)}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
