@@ -377,6 +377,28 @@ def speech_hook(words, wav, streamer):
     return f'{first}: "{best.upper()}"'
 
 
+ACTIONS_DEFAULT = ['CRASHES OUT', 'LOSES IT', 'GOES CRAZY', "CAN'T STOP LAUGHING", 'GETS EXPOSED', 'SNAPS ON CHAT']
+LABEL_TO_ACTION = {'*CRASHES OUT*': 'CRASHES OUT', '*LOSES IT*': 'LOSES IT', '*SCREAMING*': 'GOES CRAZY', '*SHOCKED*': "CAN'T BELIEVE IT"}
+
+
+def formula_title(plan, job, words, wav, hype):
+    """Fills the Title Analyst's best-scoring title formulas with this clip's details. Returns None if none fit."""
+    name = (job.get('streamer') or '').upper() or 'BRO'
+    actions = [a.upper() for a in (plan.get('actions') or [])] or ACTIONS_DEFAULT
+    act = next((LABEL_TO_ACTION[h[2]] for h in (hype or []) if h[2] in LABEL_TO_ACTION), None) or actions[0]
+    quote = None
+    sh = speech_hook(words, wav, job.get('streamer')) if words else None
+    if sh and '"' in sh:
+        quote = sh.split('"')[1]
+    for tpl in plan.get('templates') or []:
+        if '{QUOTE}' in tpl and not quote:
+            continue
+        out = tpl.replace('{NAME}', name).replace('{ACTION}', act).replace('{QUOTE}', quote or '')
+        if len(out) <= 70:
+            return out
+    return None
+
+
 def hype_moments(wav, dur, seed, cuts=()):
     """Finds the loudest burst in the clip (yelling, crash-outs) for a meme sound + action caption."""
     import random, wave, numpy as np
@@ -527,8 +549,11 @@ def render_short(job):
         cap_y = fg_y + fg_h - 230
     hook = job.get('hook') or hook_from(job.get('title'), job.get('streamer'))
     new_hook = None
-    if job.get('speech_hook', True) and words and (not job.get('hook') or TEMPLATE_HOOK.search(hook)):
-        new_hook = speech_hook(words, f'{work}/a.wav', job.get('streamer'))
+    if words and (not job.get('hook') or TEMPLATE_HOOK.search(hook)):
+        if job.get('title_plan'):        # learned from what wins on YouTube / Twitch / Kick
+            new_hook = formula_title(job['title_plan'], job, words, f'{work}/a.wav', hype)
+        elif job.get('speech_hook', True):
+            new_hook = speech_hook(words, f'{work}/a.wav', job.get('streamer'))
         if new_hook:
             hook = new_hook
     make_title(hook, f'{work}/title.png', title_h)
