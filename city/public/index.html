@@ -146,6 +146,105 @@ body.office .feed{display:none}
   .brand{font-size:16px}.brand img{width:24px;height:28px}
   .vault{font-size:12px}
 }
+
+/* ============ Interface upgrade: black glass, gold hairlines, bigger touch targets ============ */
+:root{--glass:rgba(11,12,22,.74);--glass-2:rgba(16,17,30,.9);--line:rgba(255,255,255,.09);--line-2:rgba(255,255,255,.17);--deck:#151726;
+  --gold-2:#ffdc8a;--r:16px;--ease:cubic-bezier(.2,.8,.2,1)}
+::selection{background:rgba(242,193,78,.35)}
+*{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:8px}::-webkit-scrollbar-track{background:transparent}
+/* top bar */
+.hud{gap:10px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:linear-gradient(rgba(4,5,12,.85),rgba(4,5,12,0))}
+.brand{font-size:19px;padding:6px 14px 6px 8px;border-radius:999px;background:var(--glass);backdrop-filter:blur(14px) saturate(1.3);border:1px solid var(--line);box-shadow:0 6px 24px rgba(0,0,0,.35)}
+.brand img{width:26px;height:30px}
+.tag{border-radius:999px;padding:5px 10px;background:var(--glass);backdrop-filter:blur(12px);display:inline-flex;align-items:center;gap:6px}
+.tag.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(43,217,154,.6);animation:pulse 2s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 7px rgba(43,217,154,0)}100%{box-shadow:0 0 0 0 rgba(43,217,154,0)}}
+.chip{padding:5px 11px;backdrop-filter:blur(12px);border-color:var(--line)}
+.chip b{font-weight:600;color:var(--ink)}
+.vault{border-radius:999px;padding:7px 14px;backdrop-filter:blur(14px);box-shadow:0 6px 24px rgba(0,0,0,.35)}
+.vault b{font-size:15px;margin-left:4px}
+.back{padding:8px 14px;font-weight:600;box-shadow:0 6px 24px rgba(0,0,0,.35);transition:transform .15s var(--ease),border-color .15s}
+.back:hover{transform:translateX(-2px)}
+.hint{backdrop-filter:blur(14px);border-color:var(--line);box-shadow:0 8px 28px rgba(0,0,0,.4);animation:rise .5s var(--ease) both}
+/* activity feed as toasts */
+.ev{border-radius:12px;border:1px solid var(--line);border-left:3px solid var(--ok);padding:8px 11px;backdrop-filter:blur(14px);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.ev:nth-child(2){opacity:.92}.ev:nth-child(3){opacity:.8}.ev:nth-child(4){opacity:.65}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+.hint{animation-name:riseC}@keyframes riseC{from{opacity:0;transform:translate(-50%,8px)}}
+.banner{border-radius:14px;backdrop-filter:blur(14px);background:rgba(70,14,30,.88);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+/* side panel */
+.panel{border-radius:20px;border-color:var(--line-2);background:linear-gradient(180deg,rgba(20,21,36,.92),rgba(10,11,20,.88));backdrop-filter:blur(22px) saturate(1.4);
+  box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);animation:panelIn .38s var(--ease) both}
+.panel::before{content:"";position:absolute;left:18px;right:18px;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.8}
+@keyframes panelIn{from{opacity:0;transform:translateX(24px)}}
+.p-head{padding:18px 18px 14px;background:radial-gradient(120% 140% at 0% 0%,rgba(242,193,78,.10),transparent 60%)}
+.p-head h2{font-size:24px}
+.close{border-radius:50%;width:36px;height:36px;background:rgba(255,255,255,.05);transition:background .15s,transform .2s var(--ease)}
+.close:hover{background:rgba(255,255,255,.12);transform:rotate(90deg)}
+.floor-label{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 18px 10px}
+.filters{display:flex;flex:none;gap:6px;padding:0 18px 12px;overflow-x:auto;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.filters button{flex:none;font:500 12.5px var(--f-body);color:var(--dim);background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;transition:all .15s}
+.filters button b{font-family:var(--f-mono);font-weight:600;font-size:11.5px;color:var(--ink);opacity:.8}
+.filters button.on{background:var(--gold);border-color:var(--gold);color:#1a1404;font-weight:600}
+.filters button.on b{color:#1a1404}
+.desks{padding:0 18px 18px;gap:10px}
+.desk{position:relative;flex:none;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));border-color:var(--line);overflow:hidden;
+  transition:transform .18s var(--ease),border-color .18s,box-shadow .18s}
+.desk::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:3px;background:var(--off)}
+.desk.running::before{background:var(--ok);box-shadow:0 0 12px var(--ok)}.desk.waiting::before{background:var(--wait)}.desk.error::before{background:var(--bad);box-shadow:0 0 12px var(--bad)}
+.desk:hover{transform:translateY(-2px);border-color:var(--line-2);box-shadow:0 12px 30px rgba(0,0,0,.35)}
+.desk:active{transform:translateY(0) scale(.995)}
+.desk-top{padding:12px 14px 8px 16px}
+.bot-face{width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.05)}
+.desk h3{font-size:15.5px}
+.status{font-size:10.5px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+.desk-body{padding:2px 14px 10px 16px;grid-template-columns:repeat(3,1fr);gap:6px;font-size:12px}
+.desk-body>div{background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:9px;padding:6px 8px;min-width:0;overflow-wrap:anywhere;line-height:1.3}
+.desk-body span{display:block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px}
+.desk-body .err{grid-column:1/-1;background:rgba(255,79,109,.1);border-color:rgba(255,79,109,.4)}
+.actions{padding:0 14px 12px 16px}
+/* buttons */
+.btn{border-radius:10px;padding:9px 14px;min-height:38px;background:rgba(255,255,255,.06);border-color:var(--line-2);transition:transform .12s var(--ease),background .15s,border-color .15s,box-shadow .15s}
+.btn:hover{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.3)}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:linear-gradient(180deg,var(--gold-2),var(--gold));border-color:transparent;box-shadow:0 6px 18px rgba(242,193,78,.25),inset 0 1px 0 rgba(255,255,255,.5)}
+.btn.primary:hover{box-shadow:0 8px 24px rgba(242,193,78,.4),inset 0 1px 0 rgba(255,255,255,.5);background:linear-gradient(180deg,#ffe6a6,var(--gold-2))}
+.btn.ok{background:linear-gradient(180deg,#2fd07a,#16a34a);border-color:transparent;box-shadow:0 6px 18px rgba(22,163,74,.3),inset 0 1px 0 rgba(255,255,255,.3)}
+.btn.ok:hover{background:linear-gradient(180deg,#45e08d,#1cb556)}
+.btn.quiet{background:none;border-color:var(--line);color:var(--dim)}
+.btn.quiet:hover{color:var(--ink)}
+.btn.off:hover{border-color:rgba(255,79,109,.6);color:#ffb3c0;background:rgba(255,79,109,.08)}
+.btn svg{width:15px;height:15px;flex:none}
+/* bot profile */
+.profile{padding:16px 18px 18px}
+.p-status{border-radius:14px;padding:14px 16px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));font-weight:600}
+.stat{border-radius:12px;background:rgba(0,0,0,.22)}
+.stat b{font-size:14.5px}
+.s-tabs{border-radius:12px;padding:4px}
+.s-tabs button{border-radius:9px;padding:8px;transition:all .15s}
+.s-tabs button.on{background:var(--gold);color:#1a1404;font-weight:600;box-shadow:none}
+.s-tabs button.on b{color:#1a1404}
+.clip{border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015))}
+.clip video{border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.4)}
+/* sign-in */
+.login{background:radial-gradient(ellipse at 50% 20%,rgba(242,193,78,.14),rgba(4,5,12,.97) 60%)}
+.login form{border-radius:22px;padding:32px 26px 26px;box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);animation:rise .5s var(--ease) both}
+.login input{border-radius:12px;padding:13px 14px;background:rgba(0,0,0,.35);transition:border-color .15s,box-shadow .15s}
+.login input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(242,193,78,.2)}
+.login .btn{min-height:46px;font-size:15px}
+@media (max-width:720px){
+  .panel{border-radius:22px 22px 0 0;animation-name:sheetIn}
+  .panel::before{left:50%;right:auto;top:8px;width:40px;height:4px;margin-left:-20px;border-radius:4px;background:rgba(255,255,255,.28);opacity:1}
+  @keyframes sheetIn{from{opacity:0;transform:translateY(40px)}}
+  .p-head{padding-top:22px}
+  .brand{font-size:15px;padding:5px 11px 5px 7px}
+  .btn{min-height:42px}
+  .desk-body{grid-template-columns:1fr 1fr}
+  .desk-body>div:first-child{grid-column:1/-1}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -1203,8 +1302,10 @@ addEventListener('keydown',e=>{if(e.key==='Escape')back()});
 
 const face=c=>`<svg viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8"><rect x="4" y="7" width="16" height="12" rx="3"/><circle cx="9" cy="13" r="1.4" fill="${c}"/><circle cx="15" cy="13" r="1.4" fill="${c}"/><path d="M12 7V4M10 4h4"/></svg>`;
 function botActions(bot){let toggle='';
-  if(bot.kind==='auto')toggle=bot.active?`<button class="btn" data-id="${esc(bot.id)}" data-a="deactivate">Turn off</button>`:`<button class="btn primary" data-id="${esc(bot.id)}" data-a="activate">Turn on</button>`;
-  return toggle+`<a class="btn" href="${esc(bot.editorUrl)}" target="_blank" rel="noopener">${bot.kind==='manual'?'Run in n8n':'Open in n8n'}</a>`}
+  const pw='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 7.2a8 8 0 1 0 11.4 0"/></svg>',ext='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>';
+  if(bot.kind==='auto')toggle=bot.active?`<button class="btn off" data-id="${esc(bot.id)}" data-a="deactivate">${pw}Turn off</button>`:`<button class="btn primary" data-id="${esc(bot.id)}" data-a="activate">${pw}Turn on</button>`;
+  return toggle+`<a class="btn${bot.kind==='manual'?' primary':''}" href="${esc(bot.editorUrl)}" target="_blank" rel="noopener">${bot.kind==='manual'?'Run in n8n':'Open in n8n'}${ext}</a>`}
+let deskFilter='all';
 function renderPanel(){
   const b=BIZ.find(x=>x.id===currentBiz);if(!b)return;
   const bot=focusBot&&b.bots.find(x=>x.id===focusBot);
@@ -1218,7 +1319,7 @@ function renderPanel(){
         <div class="stat"><span>Today</span><b>${esc(bot.today)}</b></div><div class="stat"><span>Last run</span><b>${esc(bot.last)}</b></div></div>
       ${bot.err?`<div class="err">${esc(bot.err)}</div>`:''}
       ${/^Clip Editor/.test(bot.name)?`<div class="studio" id="studio" data-bot="${esc(bot.id)}"><div class="s-empty">Loading Shorts…</div></div>`:''}
-      <div class="p-actions">${botActions(bot)}<button class="btn" data-back="1">Back to office</button></div></div>`;
+      <div class="p-actions">${botActions(bot)}<button class="btn quiet" data-back="1">← Back to office</button></div></div>`;
     document.body.classList.toggle('reviewing',/^Clip Editor/.test(bot.name));
     const fresh=document.getElementById('studio');
     if(fresh){if(keep&&keep.dataset.bot===fresh.dataset.bot)fresh.replaceWith(keep);else loadStudio()}
@@ -1226,7 +1327,12 @@ function renderPanel(){
   document.body.classList.remove('reviewing');
   pEye.textContent='Office floor';pTitle.textContent=b.name;pSub.textContent=b.sub;
   if(!b.bots.length){pContent.innerHTML=`<div class="empty"><b>No bots here yet.</b><br>The desks are set up and waiting. When you build a bot for this building in n8n and give it a name in <b>BOT_INFO</b>, it takes a seat here.</div>`;return}
-  pContent.innerHTML=`<div class="floor-label">${b.bots.length} desks · tap a bot to meet it</div><div class="desks">${b.bots.map(bot=>{const st=STATUS[bot.status];
+  const cnt=k=>b.bots.filter(x=>x.status===k).length,F=[['all','All',b.bots.length],['running','Running',cnt('running')],['waiting','Manual',cnt('waiting')],['error','Needs you',cnt('error')],['paused','Off',cnt('paused')]].filter(f=>f[0]==='all'||f[2]);
+  if(!F.some(f=>f[0]===deskFilter))deskFilter='all';
+  const shown=b.bots.filter(x=>deskFilter==='all'||x.status===deskFilter);
+  pContent.innerHTML=`<div class="floor-label"><span>${b.bots.length} desks · tap a bot to meet it</span></div>
+    <div class="filters" role="tablist">${F.map(([k,l,n])=>`<button data-f="${k}" class="${deskFilter===k?'on':''}">${l}<b>${n}</b></button>`).join('')}</div>
+    <div class="desks">${shown.map(bot=>{const st=STATUS[bot.status];
     return `<div class="desk ${bot.status}" data-bot="${esc(bot.id)}" tabindex="0" role="button" aria-label="Meet ${esc(bot.name)}">
       <div class="desk-top"><div class="bot-face">${face(st.css)}</div><div><h3>${esc(bot.name)}</h3><p class="job">${esc(bot.job)}</p>${bot.waiting?`<span class="review-chip">${bot.waiting} Short${bot.waiting===1?'':'s'} to review</span>`:''}</div><div class="status"><span class="dot ${bot.status}"></span>${st.label}</div></div>
       <div class="desk-body"><div><span>Schedule </span>${esc(bot.schedule)}</div><div><span>Today </span>${esc(bot.today)}</div><div><span>Last run </span>${esc(bot.last)}</div>${bot.err?`<div class="err">${esc(bot.err)}</div>`:''}</div>
@@ -1258,6 +1364,7 @@ function renderStudio(){const el=document.getElementById('studio');if(!el)return
 async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();let ok=false;try{ok=document.execCommand('copy')}catch{}a.remove();return ok}}
 pContent.addEventListener('click',async e=>{
   if(e.target.closest('[data-back]')){back();return}
+  const fl=e.target.closest('[data-f]');if(fl){deskFilter=fl.dataset.f;renderPanel();return}
   const tab=e.target.closest('[data-st]');if(tab){studioTab=tab.dataset.st;renderStudio();return}
   if(e.target.closest('[data-refresh]')){loadStudio(true);return}
   const cp=e.target.closest('[data-copy]');
