@@ -49,8 +49,9 @@ def probe(path):
 
 
 # ---------------------------------------------------------------- scouting
-def scout_twitch(handle, n):
-    url = f'https://www.twitch.tv/{handle}/clips?filter=clips&range=7d'
+def scout_twitch(handle, n, window='week'):
+    rng = {'day': '24hr', 'week': '7d', 'month': '30d'}.get(window, '7d')
+    url = f'https://www.twitch.tv/{handle}/clips?filter=clips&range={rng}'
     data = ytdlp_json(['--flat-playlist', '--playlist-end', str(n * 3), url])
     out = []
     for i, e in enumerate(data.get('entries') or []):
@@ -63,8 +64,9 @@ def scout_twitch(handle, n):
     return out[:n * 2]
 
 
-def scout_kick(handle, n):
-    req = urllib.request.Request(f'https://kick.com/api/v2/channels/{handle}/clips?sort=view&time=week',
+def scout_kick(handle, n, window='week'):
+    tm = window if window in ('day', 'week', 'month') else 'week'
+    req = urllib.request.Request(f'https://kick.com/api/v2/channels/{handle}/clips?sort=view&time={tm}',
                                  headers={'User-Agent': UA, 'Accept': 'application/json'})
     data = json.loads(urllib.request.urlopen(req, timeout=30).read())
     out = []
@@ -131,6 +133,7 @@ SCOUTS = {'twitch': scout_twitch, 'kick': scout_kick, 'youtube': scout_youtube}
 def scout():
     body = request.get_json(force=True) or {}
     per = int(body.get('per', 5))
+    window = body.get('window') or 'week'  # day | week | month: how far back to look for top clips
     clips, errors = [], []
     for s in body.get('streamers', []):
         fn = SCOUTS.get(s.get('platform'))
@@ -138,7 +141,7 @@ def scout():
             errors.append({'streamer': s.get('name'), 'error': 'unknown platform'})
             continue
         try:
-            for c in fn(s['handle'], per):
+            for c in (fn(s['handle'], per) if s.get('platform') == 'youtube' else fn(s['handle'], per, window)):
                 c.update({'streamer': s['name'], 'handle': s['handle'], 'source_platform': s['platform']})
                 clips.append(c)
         except Exception as e:
@@ -597,7 +600,7 @@ def clip_file(name):
 def health():
     du = shutil.disk_usage(DATA)
     return jsonify({'ok': True, 'clips': len(os.listdir(CLIPS)), 'free_gb': round(du.free / 1e9, 1),
-                    'cookies': os.path.exists(f'{DATA}/cookies.txt'), 'replay': True, 'highlight': True})
+                    'cookies': os.path.exists(f'{DATA}/cookies.txt'), 'replay': True, 'highlight': True, 'windows': True})
 
 
 def cleanup_loop():
