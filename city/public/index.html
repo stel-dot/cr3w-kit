@@ -35,7 +35,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);overflow
   background:linear-gradient(rgba(6,8,26,.92),rgba(6,8,26,0));pointer-events:none}
 .hud>*{pointer-events:auto}
 .brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:.08em;text-transform:uppercase}
-.brand img{width:30px;height:34px;object-fit:contain;filter:drop-shadow(0 0 8px rgba(242,193,78,.45))}
+.brand img{width:30px;height:34px;object-fit:contain;filter:drop-shadow(0 0 8px rgba(var(--accent-rgb),.45))}
 .brand span{color:var(--gold)}
 .where{font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
 .tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border:1px solid var(--line);border-radius:4px;padding:3px 7px}
@@ -87,7 +87,7 @@ body.office .feed{display:none}
 .actions{display:flex;gap:8px;padding:0 12px 12px 60px;flex-wrap:wrap}
 .btn{font-family:var(--f-body);font-size:13px;font-weight:500;color:var(--ink);background:var(--deck);border:1px solid var(--line-2);border-radius:8px;padding:7px 12px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
 .btn:hover{border-color:var(--gold)}
-.btn.primary{background:var(--gold);border-color:var(--gold);color:#1a1404;font-weight:600}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:var(--on-accent);font-weight:600}
 .btn:disabled{opacity:.5;cursor:wait}
 .btn:focus-visible,.close:focus-visible,.back:focus-visible,.desk:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .empty{padding:20px 16px;color:var(--dim);font-size:14px;line-height:1.55}
@@ -103,7 +103,7 @@ body.office .feed{display:none}
 .stat b{font-weight:500;font-size:14px}
 .stat.wide{grid-column:1/-1}
 .p-actions{display:flex;gap:8px;flex-wrap:wrap}
-.review-chip{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-family:var(--f-mono);font-size:11px;font-weight:600;letter-spacing:.04em;color:#1a1404;background:var(--gold);border-radius:999px;padding:3px 9px}
+.review-chip{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-family:var(--f-mono);font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--on-accent);background:var(--gold);border-radius:999px;padding:3px 9px}
 .studio{display:flex;flex-direction:column;gap:10px}
 .s-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .s-head h3{margin:0;font-family:var(--f-display);font-size:16px;letter-spacing:.04em}
@@ -129,7 +129,7 @@ body.office .feed{display:none}
 
 .login{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 30%,rgba(90,70,220,.35),rgba(6,8,26,.96) 60%);padding:16px}
 .login form{width:min(360px,100%);background:var(--glass-2);backdrop-filter:blur(14px);border:1px solid var(--line-2);border-radius:16px;padding:28px 24px 24px;display:flex;flex-direction:column;gap:12px;text-align:center}
-.login img{width:64px;height:72px;object-fit:contain;margin:0 auto 4px;filter:drop-shadow(0 0 14px rgba(242,193,78,.5))}
+.login img{width:64px;height:72px;object-fit:contain;margin:0 auto 4px;filter:drop-shadow(0 0 14px rgba(var(--accent-rgb),.5))}
 .login h2{margin:0;font-family:var(--f-display);letter-spacing:.08em;text-transform:uppercase}
 .login h2 span{color:var(--gold)}
 .login p{margin:0 0 4px;color:var(--dim);font-size:14px}
@@ -148,9 +148,9 @@ body.office .feed{display:none}
 }
 
 /* ============ Interface upgrade: black glass, gold hairlines, bigger touch targets ============ */
-:root{--glass:rgba(11,12,22,.74);--glass-2:rgba(16,17,30,.9);--line:rgba(255,255,255,.09);--line-2:rgba(255,255,255,.17);--deck:#151726;
+:root{--accent-rgb:242,193,78;--on-accent:#1a1404;--panel-a:rgba(20,21,36,.92);--panel-b:rgba(10,11,20,.88);--btn-bg:rgba(255,255,255,.06);--btn-hover:rgba(255,255,255,.11);--glass:rgba(11,12,22,.74);--glass-2:rgba(16,17,30,.9);--line:rgba(255,255,255,.09);--line-2:rgba(255,255,255,.17);--deck:#151726;
   --gold-2:#ffdc8a;--r:16px;--ease:cubic-bezier(.2,.8,.2,1)}
-::selection{background:rgba(242,193,78,.35)}
+::selection{background:rgba(var(--accent-rgb),.35)}
 *{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent}
 ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:8px}::-webkit-scrollbar-track{background:transparent}
 /* top bar */
@@ -174,11 +174,11 @@ body.office .feed{display:none}
 .hint{animation-name:riseC}@keyframes riseC{from{opacity:0;transform:translate(-50%,8px)}}
 .banner{border-radius:14px;backdrop-filter:blur(14px);background:rgba(70,14,30,.88);box-shadow:0 12px 40px rgba(0,0,0,.5)}
 /* side panel */
-.panel{border-radius:20px;border-color:var(--line-2);background:linear-gradient(180deg,rgba(20,21,36,.92),rgba(10,11,20,.88));backdrop-filter:blur(22px) saturate(1.4);
+.panel{border-radius:20px;border-color:var(--line-2);background:linear-gradient(180deg,var(--panel-a),var(--panel-b));backdrop-filter:blur(22px) saturate(1.4);
   box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);animation:panelIn .38s var(--ease) both}
 .panel::before{content:"";position:absolute;left:18px;right:18px;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.8}
 @keyframes panelIn{from{opacity:0;transform:translateX(24px)}}
-.p-head{padding:18px 18px 14px;background:radial-gradient(120% 140% at 0% 0%,rgba(242,193,78,.10),transparent 60%)}
+.p-head{padding:18px 18px 14px;background:radial-gradient(120% 140% at 0% 0%,rgba(var(--accent-rgb),.10),transparent 60%)}
 .p-head h2{font-size:24px}
 .close{border-radius:50%;width:36px;height:36px;background:rgba(255,255,255,.05);transition:background .15s,transform .2s var(--ease)}
 .close:hover{background:rgba(255,255,255,.12);transform:rotate(90deg)}
@@ -187,8 +187,8 @@ body.office .feed{display:none}
 .filters::-webkit-scrollbar{display:none}
 .filters button{flex:none;font:500 12.5px var(--f-body);color:var(--dim);background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;transition:all .15s}
 .filters button b{font-family:var(--f-mono);font-weight:600;font-size:11.5px;color:var(--ink);opacity:.8}
-.filters button.on{background:var(--gold);border-color:var(--gold);color:#1a1404;font-weight:600}
-.filters button.on b{color:#1a1404}
+.filters button.on{background:var(--gold);border-color:var(--gold);color:var(--on-accent);font-weight:600}
+.filters button.on b{color:var(--on-accent)}
 .desks{padding:0 18px 18px;gap:10px}
 .desk{position:relative;flex:none;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));border-color:var(--line);overflow:hidden;
   transition:transform .18s var(--ease),border-color .18s,box-shadow .18s}
@@ -206,11 +206,11 @@ body.office .feed{display:none}
 .desk-body .err{grid-column:1/-1;background:rgba(255,79,109,.1);border-color:rgba(255,79,109,.4)}
 .actions{padding:0 14px 12px 16px}
 /* buttons */
-.btn{border-radius:10px;padding:9px 14px;min-height:38px;background:rgba(255,255,255,.06);border-color:var(--line-2);transition:transform .12s var(--ease),background .15s,border-color .15s,box-shadow .15s}
-.btn:hover{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.3)}
+.btn{border-radius:10px;padding:9px 14px;min-height:38px;background:var(--btn-bg);border-color:var(--line-2);transition:transform .12s var(--ease),background .15s,border-color .15s,box-shadow .15s}
+.btn:hover{background:var(--btn-hover);border-color:rgba(255,255,255,.3)}
 .btn:active{transform:scale(.97)}
-.btn.primary{background:linear-gradient(180deg,var(--gold-2),var(--gold));border-color:transparent;box-shadow:0 6px 18px rgba(242,193,78,.25),inset 0 1px 0 rgba(255,255,255,.5)}
-.btn.primary:hover{box-shadow:0 8px 24px rgba(242,193,78,.4),inset 0 1px 0 rgba(255,255,255,.5);background:linear-gradient(180deg,#ffe6a6,var(--gold-2))}
+.btn.primary{background:linear-gradient(180deg,var(--gold-2),var(--gold));border-color:transparent;box-shadow:0 6px 18px rgba(var(--accent-rgb),.25),inset 0 1px 0 rgba(255,255,255,.5)}
+.btn.primary:hover{box-shadow:0 8px 24px rgba(var(--accent-rgb),.4),inset 0 1px 0 rgba(255,255,255,.5);filter:brightness(1.08)}
 .btn.ok{background:linear-gradient(180deg,#2fd07a,#16a34a);border-color:transparent;box-shadow:0 6px 18px rgba(22,163,74,.3),inset 0 1px 0 rgba(255,255,255,.3)}
 .btn.ok:hover{background:linear-gradient(180deg,#45e08d,#1cb556)}
 .btn.quiet{background:none;border-color:var(--line);color:var(--dim)}
@@ -224,15 +224,15 @@ body.office .feed{display:none}
 .stat b{font-size:14.5px}
 .s-tabs{border-radius:12px;padding:4px}
 .s-tabs button{border-radius:9px;padding:8px;transition:all .15s}
-.s-tabs button.on{background:var(--gold);color:#1a1404;font-weight:600;box-shadow:none}
-.s-tabs button.on b{color:#1a1404}
+.s-tabs button.on{background:var(--gold);color:var(--on-accent);font-weight:600;box-shadow:none}
+.s-tabs button.on b{color:var(--on-accent)}
 .clip{border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015))}
 .clip video{border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.4)}
 /* sign-in */
-.login{background:radial-gradient(ellipse at 50% 20%,rgba(242,193,78,.14),rgba(4,5,12,.97) 60%)}
+.login{background:radial-gradient(ellipse at 50% 20%,rgba(var(--accent-rgb),.14),rgba(4,5,12,.97) 60%)}
 .login form{border-radius:22px;padding:32px 26px 26px;box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);animation:rise .5s var(--ease) both}
 .login input{border-radius:12px;padding:13px 14px;background:rgba(0,0,0,.35);transition:border-color .15s,box-shadow .15s}
-.login input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(242,193,78,.2)}
+.login input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.2)}
 .login .btn{min-height:46px;font-size:15px}
 @media (max-width:720px){
   .panel{border-radius:22px 22px 0 0;animation-name:sheetIn}
@@ -251,6 +251,23 @@ body.office .feed{display:none}
   .desk:hover{transform:none}
   .floor-label span::after{content:" · swipe →";color:var(--gold)}
 }
+/* color settings */
+.gear{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--glass);backdrop-filter:blur(14px);border:1px solid var(--line);color:var(--ink);cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,.35);transition:transform .3s var(--ease),border-color .15s}
+.gear:hover{transform:rotate(45deg);border-color:var(--gold)}
+.gear svg{width:18px;height:18px}
+.theme{position:fixed;z-index:9;top:calc(62px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));width:min(340px,calc(100% - 32px));
+  background:linear-gradient(180deg,var(--panel-a),var(--panel-b));backdrop-filter:blur(22px) saturate(1.4);border:1px solid var(--line-2);border-radius:18px;padding:16px;
+  box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);animation:rise .3s var(--ease) both;display:flex;flex-direction:column;gap:14px}
+.theme h3{margin:0;font-family:var(--f-display);font-size:17px;letter-spacing:.04em;display:flex;align-items:center;justify-content:space-between}
+.theme .lbl{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+.swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sw{border:1px solid var(--line);border-radius:12px;padding:8px 4px 6px;background:rgba(0,0,0,.25);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;font:500 11px var(--f-body);color:var(--dim);transition:border-color .15s,transform .12s}
+.sw:hover{transform:translateY(-1px)}
+.sw.on{border-color:var(--gold);color:var(--ink)}
+.sw i{width:34px;height:22px;border-radius:7px;display:block;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.pick{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13.5px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.2)}
+.pick input[type=color]{width:44px;height:30px;border:1px solid var(--line-2);border-radius:8px;background:none;padding:2px;cursor:pointer}
+.pick input[type=range]{flex:1;max-width:150px;accent-color:var(--gold)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -262,6 +279,7 @@ body.office .feed{display:none}
   <div class="tag" id="live">Connecting…</div>
   <div class="counts" id="counts"></div>
   <div class="vault">Bot runs today <b id="runs">–</b></div>
+  <button class="gear" id="gear" type="button" aria-label="Colors" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
 </div>
 <div class="login" id="login" hidden>
   <form id="login-form">
@@ -275,6 +293,18 @@ body.office .feed{display:none}
 </div>
 <canvas id="scene" aria-label="3D city of business buildings. Tap a building to enter its office, then tap a bot to meet it."></canvas>
 <div class="fade" id="fade"></div>
+<div class="theme" id="theme" hidden role="dialog" aria-label="Interface colors">
+  <h3>Colors <button class="close" id="theme-close" aria-label="Close">×</button></h3>
+  <div><div class="lbl">Presets</div><div class="swatches" id="swatches"></div></div>
+  <div><div class="lbl">Custom</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <label class="pick">Panel color <input type="color" id="c-panel"></label>
+      <label class="pick">Panel see-through <input type="range" id="c-alpha" min="55" max="100"></label>
+      <label class="pick">Button color <input type="color" id="c-btn"></label>
+      <label class="pick">Accent (main buttons, highlights) <input type="color" id="c-accent"></label>
+    </div></div>
+  <button class="btn quiet" id="c-reset" type="button">Reset to CR3W gold</button>
+</div>
 <div class="banner" id="banner" hidden></div>
 <div class="feed" id="feed" aria-live="polite"></div>
 <div class="hint" id="hint">Drag to look around · Tap a building to enter</div>
@@ -302,6 +332,44 @@ const SMALL=matchMedia('(max-width:720px)').matches;
 const LOW=SMALL||(navigator.hardwareConcurrency||8)<=4;
 const REDUCE=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let BIZ=[],RUNS=0,mode='city',currentBiz=null,focusBot=null;
+
+// ---------- interface colors (saved on this device) ----------
+const THEMES={
+  gold:{name:'CR3W Gold',panel:'#14151f',btn:'#2a2b36',accent:'#f2c14e',alpha:90},
+  ice:{name:'Ice',panel:'#0f1a26',btn:'#1d3247',accent:'#5fd3ff',alpha:88},
+  violet:{name:'Violet',panel:'#16112a',btn:'#2c2350',accent:'#a98bff',alpha:88},
+  emerald:{name:'Emerald',panel:'#0d1a16',btn:'#1c3a30',accent:'#2fe0a0',alpha:88},
+  crimson:{name:'Crimson',panel:'#1c0f13',btn:'#3a1c24',accent:'#ff5a6e',alpha:90},
+  sunset:{name:'Sunset',panel:'#1d130e',btn:'#3d2618',accent:'#ff9a3c',alpha:90},
+  mono:{name:'Mono',panel:'#121214',btn:'#2a2a2e',accent:'#f2f2f2',alpha:92},
+  pink:{name:'Neon Pink',panel:'#1a0f1c',btn:'#3a1d3e',accent:'#ff5fd2',alpha:88}};
+const hexRgb=h=>{h=h.replace('#','');return [0,2,4].map(i=>parseInt(h.substr(i,2),16))};
+const mixHex=(h,t,k)=>{const a=hexRgb(h),b=hexRgb(t);return '#'+a.map((v,i)=>Math.round(v+(b[i]-v)*k).toString(16).padStart(2,'0')).join('')};
+let THEME=Object.assign({},THEMES.gold);
+try{const saved=JSON.parse(localStorage.getItem('cr3w-theme')||'null');if(saved&&saved.accent)THEME=Object.assign(THEME,saved)}catch{}
+function applyTheme(t){const r=document.documentElement.style,[pr,pg,pb]=hexRgb(t.panel),a=t.alpha/100,[ar,ag,ab]=hexRgb(t.accent),[br,bg,bb]=hexRgb(t.btn);
+  const dk=hexRgb(mixHex(t.panel,'#000000',.45));
+  r.setProperty('--panel-a',`rgba(${pr},${pg},${pb},${a})`);r.setProperty('--panel-b',`rgba(${dk[0]},${dk[1]},${dk[2]},${Math.max(.5,a-.04)})`);
+  r.setProperty('--glass',`rgba(${dk[0]},${dk[1]},${dk[2]},${Math.max(.55,a-.14)})`);r.setProperty('--glass-2',`rgba(${pr},${pg},${pb},${a})`);
+  r.setProperty('--btn-bg',`rgba(${br},${bg},${bb},.85)`);r.setProperty('--btn-hover',`rgba(${hexRgb(mixHex(t.btn,'#ffffff',.12)).join(',')},.95)`);
+  r.setProperty('--gold',t.accent);r.setProperty('--gold-2',mixHex(t.accent,'#ffffff',.35));r.setProperty('--accent-rgb',`${ar},${ag},${ab}`);
+  r.setProperty('--on-accent',(ar*.299+ag*.587+ab*.114)>150?'#141108':'#ffffff');
+  document.querySelector('meta[name=theme-color]').setAttribute('content',t.panel)}
+applyTheme(THEME);
+function saveTheme(){try{localStorage.setItem('cr3w-theme',JSON.stringify(THEME))}catch{}applyTheme(THEME);syncTheme()}
+function syncTheme(){document.getElementById('c-panel').value=THEME.panel;document.getElementById('c-btn').value=THEME.btn;document.getElementById('c-accent').value=THEME.accent;document.getElementById('c-alpha').value=THEME.alpha;
+  document.querySelectorAll('.sw').forEach(b=>{const p=THEMES[b.dataset.t];b.classList.toggle('on',p.panel===THEME.panel&&p.accent===THEME.accent&&p.btn===THEME.btn)})}
+(()=>{const box=document.getElementById('theme'),gear=document.getElementById('gear');
+  document.getElementById('swatches').innerHTML=Object.entries(THEMES).map(([k,t])=>`<button class="sw" type="button" data-t="${k}"><i style="background:linear-gradient(135deg,${t.panel} 0 50%,${t.accent} 50%)"></i>${t.name}</button>`).join('');
+  const toggle=open=>{box.hidden=!open;gear.setAttribute('aria-expanded',open);if(open)syncTheme()};
+  gear.addEventListener('click',()=>toggle(box.hidden));
+  document.getElementById('theme-close').addEventListener('click',()=>toggle(false));
+  box.addEventListener('click',e=>{const b=e.target.closest('.sw');if(b){THEME=Object.assign({},THEMES[b.dataset.t]);saveTheme()}});
+  [['c-panel','panel'],['c-btn','btn'],['c-accent','accent']].forEach(([id,k])=>document.getElementById(id).addEventListener('input',e=>{THEME[k]=e.target.value;saveTheme()}));
+  document.getElementById('c-alpha').addEventListener('input',e=>{THEME.alpha=+e.target.value;saveTheme()});
+  document.getElementById('c-reset').addEventListener('click',()=>{THEME=Object.assign({},THEMES.gold);saveTheme()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!box.hidden)toggle(false)});
+})();
 
 // ---------- renderer ----------
 const canvas=document.getElementById('scene');
